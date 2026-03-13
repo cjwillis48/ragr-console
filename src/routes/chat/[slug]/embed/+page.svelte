@@ -198,6 +198,9 @@
 			event.preventDefault();
 			sendMessage();
 		}
+		if (event.key === 'Escape' && isOpen) {
+			isOpen = false;
+		}
 	}
 
 	function isNonAnswered(s: string | undefined): boolean {
@@ -266,6 +269,8 @@
 	</style>
 </svelte:head>
 
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && isOpen) isOpen = false; }} />
+
 {#if isChatAvailable}
 	<div
 		in:fly={{ x: 96, duration: 320, opacity: 0 }}
@@ -281,8 +286,8 @@
 				<!-- Resize handle -->
 				<button
 					type="button"
-					class="hidden md:flex absolute top-0 left-0 h-6 w-6 items-center justify-center cursor-nwse-resize z-10"
-					style="color: {txt}; opacity: 0.4;"
+					class="hidden md:flex absolute top-0 left-0 h-8 w-8 items-center justify-center cursor-nwse-resize z-10 hover:opacity-100 transition-opacity"
+					style="color: {txt}; opacity: 0.5;"
 					onpointerdown={handleResizeStart}
 					aria-label="Resize chat window"
 				>

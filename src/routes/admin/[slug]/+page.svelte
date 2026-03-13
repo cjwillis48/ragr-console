@@ -190,11 +190,24 @@
 				req.source_identifier = sourceIdentifier.trim() || 'manual-text';
 			}
 			const res = await createSource(page.params.slug, req);
-			success = res.message;
+			success = res.message || 'Source added — processing...';
+			const identifier = sourceUrl.trim() || sourceIdentifier.trim() || 'manual-text';
 			sourceUrl = '';
 			sourceText = '';
 			sourceIdentifier = '';
-			await loadTab('sources');
+			if (!sources.find(s => s.source_identifier === identifier)) {
+				sources = [...sources, {
+					id: 0,
+					source_identifier: res.source_identifier || identifier,
+					source_url: '',
+					content_type: '',
+					status: res.status || 'processing',
+					chunk_count: res.chunks_created ?? 0,
+					embedding_cost: 0,
+					ingested_at: new Date().toISOString(),
+					updated_at: new Date().toISOString()
+				}];
+			}
 			startSourcePolling();
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Failed to add source';
@@ -249,9 +262,24 @@
 		error = null;
 		try {
 			const results = await uploadSources(page.params.slug, fileInput.files);
-			success = `Uploaded ${results.length} file(s)`;
+			success = `Uploaded ${results.length} file(s) — processing...`;
 			fileInput.value = '';
-			await loadTab('sources');
+			// Add placeholder sources immediately so user sees them as "processing"
+			for (const r of results) {
+				if (!sources.find(s => s.source_identifier === r.source_identifier)) {
+					sources = [...sources, {
+						id: 0,
+						source_identifier: r.source_identifier,
+						source_url: '',
+						content_type: '',
+						status: r.status || 'processing',
+						chunk_count: r.chunks_created ?? 0,
+						embedding_cost: 0,
+						ingested_at: new Date().toISOString(),
+						updated_at: new Date().toISOString()
+					}];
+				}
+			}
 			startSourcePolling();
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Upload failed';

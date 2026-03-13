@@ -218,6 +218,9 @@
 			event.preventDefault();
 			sendMessage();
 		}
+		if (event.key === 'Escape' && isOpen) {
+			isOpen = false;
+		}
 	}
 
 	function isNonAnswered(s: string | undefined): boolean {
