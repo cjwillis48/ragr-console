@@ -155,6 +155,28 @@ export interface CreateSourceResponse {
 	message: string;
 }
 
+export interface PresignFileRequest {
+	filename: string;
+	content_type: string;
+}
+
+export interface PresignFileResponse {
+	filename: string;
+	object_key: string;
+	upload_url: string;
+	content_type: string;
+}
+
+export interface PresignResponse {
+	upload_id: string;
+	files: PresignFileResponse[];
+}
+
+export interface ConfirmFileRequest {
+	filename: string;
+	object_key: string;
+}
+
 export interface ChunkResponse {
 	id: number;
 	content: string;

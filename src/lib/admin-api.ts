@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, ConversationListResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse } from './admin-types';
+import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, ConversationListResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse } from './admin-types';
 
 const baseUrl = () => env.PUBLIC_RAGR_API_URL;
 
@@ -115,6 +115,54 @@ export async function deleteAllSources(slug: string): Promise<void> {
 }
 
 export async function uploadSources(slug: string, files: FileList): Promise<CreateSourceResponse[]> {
+	// Try presigned R2 upload first
+	try {
+		return await uploadViaPresign(slug, files);
+	} catch (e: unknown) {
+		// Fall back to multipart if presign returns 501 (R2 not configured) or fails
+		if (e instanceof Error && e.message.includes('501')) {
+			return uploadViaMultipart(slug, files);
+		}
+		throw e;
+	}
+}
+
+async function uploadViaPresign(slug: string, files: FileList): Promise<CreateSourceResponse[]> {
+	const filesMeta = Array.from(files).map(f => ({
+		filename: f.name,
+		content_type: f.type || 'application/octet-stream'
+	}));
+
+	const presignRes = await authedFetch(`/models/${slug}/sources/upload/presign`, {
+		method: 'POST',
+		body: JSON.stringify({ files: filesMeta })
+	});
+	const presign: PresignResponse = await presignRes.json();
+
+	// Upload each file directly to R2
+	await Promise.all(presign.files.map(async (pf) => {
+		const file = Array.from(files).find(f => f.name === pf.filename);
+		if (!file) throw new Error(`File not found: ${pf.filename}`);
+		const uploadRes = await fetch(pf.upload_url, {
+			method: 'PUT',
+			headers: { 'Content-Type': pf.content_type },
+			body: file
+		});
+		if (!uploadRes.ok) throw new Error(`R2 upload failed for ${pf.filename} (${uploadRes.status})`);
+	}));
+
+	// Confirm uploads
+	const confirmRes = await authedFetch(`/models/${slug}/sources/upload/confirm`, {
+		method: 'POST',
+		body: JSON.stringify({
+			upload_id: presign.upload_id,
+			files: presign.files.map(pf => ({ filename: pf.filename, object_key: pf.object_key }))
+		})
+	});
+	return confirmRes.json();
+}
+
+async function uploadViaMultipart(slug: string, files: FileList): Promise<CreateSourceResponse[]> {
 	const auth = await getAuthHeader();
 	const formData = new FormData();
 	for (const file of files) {
