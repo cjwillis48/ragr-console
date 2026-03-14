@@ -5,8 +5,7 @@
 	import { fly, fade } from 'svelte/transition';
 	import { fetchModelInfo, fetchTheme, streamChat } from '$lib/api';
 	import type { ModelInfo, WidgetTheme, Message } from '$lib/types';
-	import ChatMessage from '$lib/components/ChatMessage.svelte';
-	import DOMPurify from 'isomorphic-dompurify';
+	import { sanitizeHtml } from '$lib/sanitize';
 	import { marked } from 'marked';
 
 	let isOpen = $state(false);
@@ -244,7 +243,7 @@
 
 	function renderMarkdown(text: string): string {
 		const html = marked.parse(text, { gfm: true, breaks: true });
-		return DOMPurify.sanitize(typeof html === 'string' ? html : '');
+		return sanitizeHtml(typeof html === 'string' ? html : '');
 	}
 
 	let bg = $derived(theme.bg_color ?? '#0f172a');
@@ -335,7 +334,7 @@
 										<p class="mb-2 text-[11px] leading-snug {getStatusDescriptionClass(msg.status)}">{getStatusDescription(msg.status)}</p>
 									{/if}
 									{#if msg.content}
-										<div class="chat-markdown break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
+										<div class="chat-markdown wrap-break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
 											{@html renderMarkdown(msg.content)}
 										</div>
 									{:else if msg.isStreaming}
@@ -358,7 +357,7 @@
 							rows="2"
 							maxlength="2000"
 							placeholder={theme.placeholder ?? 'Ask a question...'}
-							class="min-h-[2.75rem] max-h-28 flex-1 resize-y px-3 py-2 text-sm focus:outline-none"
+							class="min-h-11 max-h-28 flex-1 resize-y px-3 py-2 text-sm focus:outline-none"
 							style="background: color-mix(in srgb, {txt} 10%, {bg}); color: {txt}; border: 1px solid {borderColor}; border-radius: {radius}px;"
 							onkeydown={handleKeydown}
 						></textarea>

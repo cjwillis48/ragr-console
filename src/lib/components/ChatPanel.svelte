@@ -4,7 +4,7 @@
 	import { fly, fade } from 'svelte/transition';
 	import { streamChat } from '$lib/api';
 	import type { Message } from '$lib/types';
-	import DOMPurify from 'isomorphic-dompurify';
+	import { sanitizeHtml } from '$lib/sanitize';
 	import { marked } from 'marked';
 
 	interface Props {
@@ -264,7 +264,7 @@
 
 	function renderMarkdown(text: string): string {
 		const html = marked.parse(text, { gfm: true, breaks: true });
-		return DOMPurify.sanitize(typeof html === 'string' ? html : '');
+		return sanitizeHtml(typeof html === 'string' ? html : '');
 	}
 </script>
 

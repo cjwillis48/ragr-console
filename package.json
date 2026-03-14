@@ -25,7 +25,7 @@
 	},
 	"dependencies": {
 		"@clerk/themes": "^2.4.57",
-		"isomorphic-dompurify": "^3.0.0",
+		"dompurify": "^3.3.3",
 		"marked": "^17.0.4",
 		"svelte-clerk": "^1.0.2"
 	}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import DOMPurify from 'isomorphic-dompurify';
+	import { sanitizeHtml } from '$lib/sanitize';
 	import { marked } from 'marked';
 
 	let {
@@ -20,7 +20,7 @@
 
 	function renderMarkdown(text: string): string {
 		const html = marked.parse(text, { gfm: true, breaks: true });
-		return DOMPurify.sanitize(typeof html === 'string' ? html : '');
+		return sanitizeHtml(typeof html === 'string' ? html : '');
 	}
 
 	function isNonAnswered(s: string | undefined): boolean {
