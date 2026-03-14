@@ -1,7 +1,8 @@
-import type { Handle } from '@sveltejs/kit';
+import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { withClerkHandler } from 'svelte-clerk/server';
 import { env } from '$env/dynamic/public';
+import { logError } from '$lib/axiom';
 
 const cspHandler: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
@@ -35,3 +36,15 @@ const cspHandler: Handle = async ({ event, resolve }) => {
 };
 
 export const handle = sequence(withClerkHandler(), cspHandler);
+
+export const handleError: HandleServerError = async ({ error, event, status, message }) => {
+	logError(error, {
+		url: event.url.toString(),
+		method: event.request.method,
+		status,
+		message,
+		route: event.route.id
+	});
+
+	return { message: 'An unexpected error occurred' };
+};

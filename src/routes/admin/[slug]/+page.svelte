@@ -2,16 +2,22 @@
 	import { page } from '$app/state';
 	import { env } from '$env/dynamic/public';
 	import { onMount } from 'svelte';
-	import { getModel, updateModel, getTheme, updateTheme, getStats, getConversations, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, listApiKeys, createApiKey, revokeApiKey } from '$lib/admin-api';
-	import type { RagModel, RagModelUpdate, WidgetTheme, StatsResponse, ConversationResponse, SourceResponse, CreateSourceRequest, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse } from '$lib/admin-types';
+	import { getModel, updateModel, getTheme, updateTheme, getStats, getConversations, getConversationMessages, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, listApiKeys, createApiKey, revokeApiKey } from '$lib/admin-api';
+	import type { RagModel, RagModelUpdate, WidgetTheme, StatsResponse, ConversationSummaryResponse, MessageResponse, SourceResponse, CreateSourceRequest, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse } from '$lib/admin-types';
+	import { chunkRetrievalMethod, sortChunkRefs } from '$lib/admin-types';
 	import ChatPanel from '$lib/components/ChatPanel.svelte';
+
+	const slug = $derived(page.params.slug!);
 
 	type Tab = 'settings' | 'widget' | 'sources' | 'conversations' | 'api-keys' | 'stats';
 
 	let model = $state<RagModel | null>(null);
 	let stats = $state<StatsResponse | null>(null);
-	let conversations = $state<ConversationResponse[]>([]);
+	let conversations = $state<ConversationSummaryResponse[]>([]);
 	let conversationsTotal = $state(0);
+	let expandedConversationId = $state<number | null>(null);
+	let conversationMessages = $state<MessageResponse[]>([]);
+	let loadingMessages = $state(false);
 	let sources = $state<SourceResponse[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -56,15 +62,27 @@
 	}
 	let launcherHintText = $derived(theme.launcher_hint?.trim() || '');
 
+	function themeColor(key: string, fallback: string): string {
+		return (theme[key as keyof WidgetTheme] as string) ?? fallback;
+	}
+
+	function setThemeColor(key: string, e: Event) {
+		theme = { ...theme, [key]: (e.target as HTMLInputElement).value };
+	}
+
+	function setSourceType(key: string) {
+		sourceType = key as typeof sourceType;
+	}
+
 	// Chunks viewer
 	let chunksData = $state<ChunkListResponse | null>(null);
 	let chunksSourceId = $state<number | null>(null);
 	let loadingChunks = $state(false);
 
-	// Conversation chunks
-	let expandedConvId = $state<number | null>(null);
-	let convChunks = $state<ChunkDetail[]>([]);
-	let loadingConvChunks = $state(false);
+	// Message chunks (expanded within a conversation)
+	let expandedMsgId = $state<number | null>(null);
+	let msgChunks = $state<ChunkDetail[]>([]);
+	let loadingMsgChunks = $state(false);
 
 	// API keys
 	let apiKeys = $state<ApiKeyRead[]>([]);
@@ -84,7 +102,7 @@
 		stopSourcePolling();
 		sourcePollTimer = setInterval(async () => {
 			try {
-				const res = await getSources(page.params.slug);
+				const res = await getSources(slug);
 				sources = res.sources;
 				if (sources.every((s) => s.status === 'complete' || s.status === 'error')) {
 					stopSourcePolling();
@@ -104,7 +122,7 @@
 		loading = true;
 		error = null;
 		try {
-			model = await getModel(page.params.slug);
+			model = await getModel(slug);
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Failed to load model';
 		} finally {
@@ -120,18 +138,18 @@
 		if (tab !== 'sources') stopSourcePolling();
 		try {
 			if (tab === 'widget') {
-				theme = await getTheme(page.params.slug);
+				theme = await getTheme(slug);
 			} else if (tab === 'stats') {
-				stats = await getStats(page.params.slug);
+				stats = await getStats(slug);
 			} else if (tab === 'conversations') {
-				const res = await getConversations(page.params.slug);
+				const res = await getConversations(slug);
 				conversations = res.conversations;
 				conversationsTotal = res.total;
 			} else if (tab === 'sources') {
-				const res = await getSources(page.params.slug);
+				const res = await getSources(slug);
 				sources = res.sources;
 			} else if (tab === 'api-keys') {
-				apiKeys = await listApiKeys(page.params.slug);
+				apiKeys = await listApiKeys(slug);
 				newlyCreatedKey = null;
 			}
 		} catch (e: unknown) {
@@ -165,7 +183,7 @@
 			};
 			if (anthropicKeyInput.trim()) update.anthropic_api_key = anthropicKeyInput.trim();
 			if (voyageKeyInput.trim()) update.voyage_api_key = voyageKeyInput.trim();
-			model = await updateModel(page.params.slug, update);
+			model = await updateModel(slug, update);
 			anthropicKeyInput = '';
 			voyageKeyInput = '';
 			success = 'Saved successfully';
@@ -189,7 +207,7 @@
 				req.content = sourceText;
 				req.source_identifier = sourceIdentifier.trim() || 'manual-text';
 			}
-			const res = await createSource(page.params.slug, req);
+			const res = await createSource(slug, req);
 			success = res.message || 'Source added — processing...';
 			const identifier = sourceUrl.trim() || sourceIdentifier.trim() || 'manual-text';
 			sourceUrl = '';
@@ -226,7 +244,7 @@
 		chunksData = null;
 		loadingChunks = true;
 		try {
-			chunksData = await getSourceChunks(page.params.slug, sourceId);
+			chunksData = await getSourceChunks(slug, sourceId);
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Failed to load chunks';
 			chunksSourceId = null;
@@ -235,24 +253,48 @@
 		}
 	}
 
-	async function toggleConversation(conv: ConversationResponse) {
-		if (expandedConvId === conv.id) {
-			expandedConvId = null;
-			convChunks = [];
+	async function toggleConversation(convId: number) {
+		if (expandedConversationId === convId) {
+			expandedConversationId = null;
+			conversationMessages = [];
+			expandedMsgId = null;
+			msgChunks = [];
 			return;
 		}
-		expandedConvId = conv.id;
-		convChunks = [];
-		if (!conv.retrieved_chunks?.length) return;
-		loadingConvChunks = true;
+		expandedConversationId = convId;
+		conversationMessages = [];
+		expandedMsgId = null;
+		msgChunks = [];
+		loadingMessages = true;
 		try {
-			const ids = conv.retrieved_chunks.map(c => c.chunk_id);
-			convChunks = await getChunksByIds(page.params.slug, ids);
+			const detail = await getConversationMessages(slug, convId);
+			conversationMessages = detail.messages;
+		} catch (e: unknown) {
+			error = e instanceof Error ? e.message : 'Failed to load messages';
+			expandedConversationId = null;
+		} finally {
+			loadingMessages = false;
+		}
+	}
+
+	async function toggleMessageChunks(msg: MessageResponse) {
+		if (expandedMsgId === msg.id) {
+			expandedMsgId = null;
+			msgChunks = [];
+			return;
+		}
+		expandedMsgId = msg.id;
+		msgChunks = [];
+		if (!msg.retrieved_chunks?.length) return;
+		loadingMsgChunks = true;
+		try {
+			const ids = msg.retrieved_chunks.map(c => c.chunk_id);
+			msgChunks = await getChunksByIds(slug, ids);
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Failed to load chunks';
-			expandedConvId = null;
+			expandedMsgId = null;
 		} finally {
-			loadingConvChunks = false;
+			loadingMsgChunks = false;
 		}
 	}
 
@@ -261,7 +303,7 @@
 		addingSource = true;
 		error = null;
 		try {
-			const results = await uploadSources(page.params.slug, fileInput.files);
+			const results = await uploadSources(slug, fileInput.files);
 			success = `Uploaded ${results.length} file(s) — processing...`;
 			fileInput.value = '';
 			// Add placeholder sources immediately so user sees them as "processing"
@@ -291,7 +333,7 @@
 	async function handleDeleteSource(id: number) {
 		if (!confirm('Delete this source and all its chunks?')) return;
 		try {
-			await deleteSource(page.params.slug, id);
+			await deleteSource(slug, id);
 			await loadTab('sources');
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Failed to delete source';
@@ -301,7 +343,7 @@
 	async function handlePurge() {
 		if (!confirm('Delete ALL sources and chunks? This cannot be undone.')) return;
 		try {
-			await deleteAllSources(page.params.slug);
+			await deleteAllSources(slug);
 			await loadTab('sources');
 			success = 'All sources purged';
 		} catch (e: unknown) {
@@ -342,7 +384,7 @@
 		error = null;
 		success = null;
 		try {
-			theme = await updateTheme(page.params.slug, theme);
+			theme = await updateTheme(slug, theme);
 			success = 'Theme saved';
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Failed to save theme';
@@ -356,9 +398,9 @@
 		creatingKey = true;
 		error = null;
 		try {
-			newlyCreatedKey = await createApiKey(page.params.slug, newKeyLabel.trim());
+			newlyCreatedKey = await createApiKey(slug, newKeyLabel.trim());
 			newKeyLabel = '';
-			apiKeys = await listApiKeys(page.params.slug);
+			apiKeys = await listApiKeys(slug);
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Failed to create key';
 		} finally {
@@ -369,8 +411,8 @@
 	async function handleRevokeKey(keyId: number) {
 		if (!confirm('Revoke this API key? This cannot be undone.')) return;
 		try {
-			await revokeApiKey(page.params.slug, keyId);
-			apiKeys = await listApiKeys(page.params.slug);
+			await revokeApiKey(slug, keyId);
+			apiKeys = await listApiKeys(slug);
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Failed to revoke key';
 		}
@@ -499,12 +541,12 @@
 			<fieldset class="space-y-4">
 				<legend class="text-sm font-medium text-text-muted mb-2">API Keys</legend>
 				<label class="block">
-					<div class="flex items-center gap-2">
+					<span class="flex items-center gap-2">
 						<span class="text-sm text-text-muted">Anthropic API Key</span>
 						{#if model.has_custom_anthropic_key}
 							<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">configured</span>
 						{/if}
-					</div>
+					</span>
 					<input
 						type="password"
 						bind:value={anthropicKeyInput}
@@ -514,12 +556,12 @@
 					/>
 				</label>
 				<label class="block">
-					<div class="flex items-center gap-2">
+					<span class="flex items-center gap-2">
 						<span class="text-sm text-text-muted">Voyage API Key</span>
 						{#if model.has_custom_voyage_key}
 							<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">configured</span>
 						{/if}
-					</div>
+					</span>
 					<input
 						type="password"
 						bind:value={voyageKeyInput}
@@ -627,21 +669,21 @@
 						] as [label, key, fallback]}
 							<label class="block">
 								<span class="text-sm text-text-muted">{label}</span>
-								<div class="mt-1 flex items-center gap-2">
+								<span class="mt-1 flex items-center gap-2">
 									<input
 										type="color"
-										value={theme[key as keyof WidgetTheme] as string ?? fallback}
-										oninput={(e) => { theme = { ...theme, [key]: (e.target as HTMLInputElement).value }; }}
+										value={themeColor(key, fallback)}
+										oninput={(e) => setThemeColor(key, e)}
 										class="h-9 w-9 rounded border border-border cursor-pointer"
 									/>
 									<input
 										type="text"
-										value={theme[key as keyof WidgetTheme] as string ?? ''}
-										oninput={(e) => { theme = { ...theme, [key]: (e.target as HTMLInputElement).value }; }}
+										value={themeColor(key, '')}
+										oninput={(e) => setThemeColor(key, e)}
 										placeholder={fallback}
 										class="flex-1 rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
 									/>
-								</div>
+								</span>
 							</label>
 						{/each}
 					</div>
@@ -743,6 +785,7 @@
 							</div>
 						{/if}
 						<button
+							aria-label="Open chat"
 							class="inline-flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg"
 							style="background: {theme.primary_color ?? '#6366f1'};"
 						>
@@ -767,7 +810,7 @@
 				<div class="flex gap-2">
 					{#each [['url', 'URL'], ['text', 'Text'], ['upload', 'Upload']] as [key, label]}
 						<button
-							onclick={() => (sourceType = key as 'url' | 'text' | 'upload')}
+							onclick={() => setSourceType(key)}
 							class="px-3 py-1 text-sm rounded-lg {sourceType === key
 								? 'bg-accent text-white'
 								: 'bg-surface border border-border text-text-muted hover:text-text'}"
@@ -851,7 +894,7 @@
 												<span class="text-[10px] font-mono text-text-muted">Chunk {i + 1}</span>
 												<span class="text-[10px] text-text-muted">{chunk.content_type}</span>
 											</div>
-											<pre class="text-xs text-text whitespace-pre-wrap break-words max-h-48 overflow-y-auto">{chunk.content}</pre>
+											<pre class="text-xs text-text whitespace-pre-wrap wrap-break-word max-h-48 overflow-y-auto">{chunk.content}</pre>
 										</div>
 									{/each}
 								{/if}
@@ -874,60 +917,100 @@
 				{#each conversations as conv}
 					<button
 						type="button"
-						class="w-full text-left bg-surface-alt border border-border rounded-lg p-4 space-y-2 hover:border-accent/50 transition-colors cursor-pointer"
-						onclick={() => toggleConversation(conv)}
+						class="w-full text-left bg-surface-alt border border-border rounded-lg p-4 hover:border-accent/50 transition-colors cursor-pointer"
+						onclick={() => toggleConversation(conv.id)}
 					>
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-2">
-								<span class="text-xs px-2 py-0.5 rounded {conv.status === 'answered'
-									? 'bg-green-500/20 text-green-400'
-									: conv.status === 'off_topic'
-										? 'bg-yellow-500/20 text-yellow-400'
-										: 'bg-red-500/20 text-red-400'}">{conv.status}</span>
-								{#if conv.retrieved_chunks?.length}
-									<span class="text-[10px] text-text-muted">{conv.retrieved_chunks.length} chunks</span>
-								{/if}
-							</div>
-							<div class="flex items-center gap-2">
-								<span class="text-xs text-text-muted">{new Date(conv.created_at).toLocaleString()}</span>
-								<span class="text-xs text-text-muted">{expandedConvId === conv.id ? '▲' : '▼'}</span>
-							</div>
-						</div>
-						<div>
-							<div class="text-sm font-medium">Q: {conv.question}</div>
-							<div class="text-sm text-text-muted mt-1">A: {conv.answer}</div>
-						</div>
-						<div class="text-xs text-text-muted">
-							Tokens: {conv.tokens_in} in / {conv.tokens_out} out
-						</div>
+						<span class="flex items-center justify-between">
+							<span class="flex items-center gap-2">
+								<span class="text-sm font-medium">{conv.title || 'Untitled'}</span>
+								<span class="text-xs px-2 py-0.5 rounded bg-surface border border-border text-text-muted">{conv.message_count} msg{conv.message_count !== 1 ? 's' : ''}</span>
+							</span>
+							<span class="flex items-center gap-3">
+								<span class="text-xs text-text-muted font-mono">{conv.session_id.slice(0, 8)}...</span>
+								<span class="text-xs text-text-muted">{new Date(conv.updated_at).toLocaleString()}</span>
+								<span class="text-xs text-text-muted">{expandedConversationId === conv.id ? '▲' : '▼'}</span>
+							</span>
+						</span>
 					</button>
-					{#if expandedConvId === conv.id}
+					{#if expandedConversationId === conv.id}
 						<div class="ml-4 space-y-2">
-							{#if loadingConvChunks}
-								<div class="text-text-muted text-sm">Loading chunks...</div>
-							{:else if !conv.retrieved_chunks?.length}
-								<div class="text-text-muted text-sm">No chunks were retrieved for this conversation.</div>
-							{:else if convChunks.length === 0}
-								<div class="text-text-muted text-sm">Chunk content unavailable.</div>
+							{#if loadingMessages}
+								<div class="text-text-muted text-sm">Loading messages...</div>
+							{:else if conversationMessages.length === 0}
+								<div class="text-text-muted text-sm">No messages in this conversation.</div>
 							{:else}
-								<div class="flex items-center justify-between mb-1">
-									<span class="text-xs text-text-muted">{convChunks.length} retrieved chunk(s)</span>
-								</div>
-								{#each convChunks as chunk, i}
-									{@const ref = conv.retrieved_chunks.find(r => r.chunk_id === chunk.id)}
-									<div class="bg-surface border border-border rounded-lg p-3">
-										<div class="flex items-center justify-between mb-1">
-											<span class="text-[10px] font-mono text-text-muted">
-												{chunk.source_identifier} &middot; {chunk.content_type}
-											</span>
-											<span class="text-[10px] text-text-muted">
-												{#if ref}
-													dist: {ref.distance.toFixed(3)}{ref.rerank_score != null ? ` · rerank: ${ref.rerank_score.toFixed(3)}` : ''}
+								{#each conversationMessages as msg}
+									<button
+										type="button"
+										class="w-full text-left bg-surface border border-border rounded-lg p-3 space-y-2 hover:border-accent/50 transition-colors cursor-pointer"
+										onclick={() => toggleMessageChunks(msg)}
+									>
+										<span class="flex items-center justify-between">
+											<span class="flex items-center gap-2">
+												<span class="text-xs px-2 py-0.5 rounded {msg.status === 'answered'
+													? 'bg-green-500/20 text-green-400'
+													: msg.status === 'off_topic'
+														? 'bg-yellow-500/20 text-yellow-400'
+														: 'bg-red-500/20 text-red-400'}">{msg.status}</span>
+												{#if msg.retrieved_chunks?.length}
+													<span class="text-[10px] text-text-muted">{msg.retrieved_chunks.length} chunks</span>
 												{/if}
 											</span>
+											<span class="flex items-center gap-2">
+												<span class="text-xs text-text-muted">{new Date(msg.created_at).toLocaleString()}</span>
+												<span class="text-xs text-text-muted">{expandedMsgId === msg.id ? '▲' : '▼'}</span>
+											</span>
+										</span>
+										<span class="block">
+											<span class="block text-sm font-medium">Q: {msg.question}</span>
+											<span class="block text-sm text-text-muted mt-1">A: {msg.answer}</span>
+										</span>
+										<span class="block text-xs text-text-muted">
+											Tokens: {msg.tokens_in} in / {msg.tokens_out} out
+										</span>
+									</button>
+									{#if expandedMsgId === msg.id}
+										<div class="ml-4 space-y-2">
+											{#if loadingMsgChunks}
+												<div class="text-text-muted text-sm">Loading chunks...</div>
+											{:else if !msg.retrieved_chunks?.length}
+												<div class="text-text-muted text-sm">No chunks were retrieved for this message.</div>
+											{:else if msgChunks.length === 0}
+												<div class="text-text-muted text-sm">Chunk content unavailable.</div>
+											{:else}
+												{@const sortedRefs = sortChunkRefs(msg.retrieved_chunks)}
+												<div class="flex items-center justify-between mb-1">
+													<span class="text-xs text-text-muted">{msgChunks.length} retrieved chunk(s) — sorted by score</span>
+												</div>
+												{#each sortedRefs as ref}
+													{@const chunk = msgChunks.find(c => c.id === ref.chunk_id)}
+													{@const method = chunkRetrievalMethod(ref)}
+													{#if chunk}
+														<div class="bg-surface-alt border border-border rounded-lg p-3">
+															<div class="flex items-center justify-between mb-1">
+																<div class="flex items-center gap-2">
+																	<span class="text-[10px] font-mono text-text-muted">
+																		{chunk.source_identifier} &middot; {chunk.content_type}
+																	</span>
+																	<span class="text-[10px] px-1.5 py-0.5 rounded {method === 'rerank'
+																		? 'bg-purple-500/20 text-purple-400'
+																		: method === 'keyword'
+																			? 'bg-blue-500/20 text-blue-400'
+																			: method === 'hybrid'
+																				? 'bg-cyan-500/20 text-cyan-400'
+																				: 'bg-emerald-500/20 text-emerald-400'}">{method}</span>
+																</div>
+																<span class="text-[10px] text-text-muted">
+																	dist: {ref.distance.toFixed(3)}{ref.rerank_score != null ? ` · rerank: ${ref.rerank_score.toFixed(3)}` : ''}{ref.keyword_rank != null ? ` · kw: ${ref.keyword_rank}` : ''}
+																</span>
+															</div>
+															<pre class="text-xs text-text whitespace-pre-wrap wrap-break-word max-h-48 overflow-y-auto">{chunk.content}</pre>
+														</div>
+													{/if}
+												{/each}
+											{/if}
 										</div>
-										<pre class="text-xs text-text whitespace-pre-wrap break-words max-h-48 overflow-y-auto">{chunk.content}</pre>
-									</div>
+									{/if}
 								{/each}
 							{/if}
 						</div>
@@ -1045,6 +1128,7 @@
 					['Sources', stats.total_sources],
 					['Chunks', stats.total_chunks],
 					['Conversations', stats.total_conversations],
+					['Messages', stats.total_messages],
 					['Unanswered', stats.unanswered_questions],
 					['Month Cost', `$${stats.current_month_cost.toFixed(2)}`],
 					['Budget Limit', `$${stats.budget_limit.toFixed(2)}`],

@@ -18,6 +18,8 @@
 	let abortController: AbortController | null = null;
 	let sessionId = crypto.randomUUID();
 
+	const slug = $derived(page.params.slug!);
+
 	let canSend = $derived(!isStreaming && pageStatus === 'ready' && modelInfo?.accepting_requests);
 
 	async function scrollToBottom() {
@@ -42,8 +44,8 @@
 		error = null;
 		try {
 			const [info, themeData] = await Promise.all([
-				fetchModelInfo(page.params.slug),
-				fetchTheme(page.params.slug)
+				fetchModelInfo(slug),
+				fetchTheme(slug)
 			]);
 			modelInfo = info;
 			theme = themeData;
@@ -84,7 +86,7 @@
 		isStreaming = true;
 		abortController = new AbortController();
 
-		await streamChat(page.params.slug, text, sessionId, {
+		await streamChat(slug, text, sessionId, {
 			onDelta(delta) {
 				messages = messages.map((m) =>
 					m.id === assistantId ? { ...m, content: m.content + delta } : m
@@ -127,7 +129,7 @@
 	{:else if pageStatus === 'not_found'}
 		<div class="flex flex-col items-center justify-center flex-1 gap-2">
 			<div class="text-xl font-medium text-slate-900 dark:text-slate-100">Model not found</div>
-			<div class="text-slate-500 dark:text-slate-400">The model "{page.params.slug}" doesn't exist.</div>
+			<div class="text-slate-500 dark:text-slate-400">The model "{slug}" doesn't exist.</div>
 		</div>
 	{:else if pageStatus === 'error'}
 		<div class="flex flex-col items-center justify-center flex-1 gap-3">

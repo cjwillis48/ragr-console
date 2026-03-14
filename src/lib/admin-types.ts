@@ -81,6 +81,7 @@ export interface StatsResponse {
 	model_slug: string;
 	total_chunks: number;
 	total_conversations: number;
+	total_messages: number;
 	unanswered_questions: number;
 	current_month_cost: number;
 	budget_limit: number;
@@ -92,9 +93,31 @@ export interface RetrievedChunkRef {
 	chunk_id: number;
 	distance: number;
 	rerank_score: number | null;
+	keyword_rank: number | null;
+	retrieval_method: string | null;
 }
 
-export interface ConversationResponse {
+export function chunkRetrievalMethod(ref: RetrievedChunkRef): string {
+	if (ref.retrieval_method) return ref.retrieval_method;
+	// Fallback for data written before the backfill migration
+	if (ref.rerank_score != null) return 'rerank';
+	if (ref.keyword_rank != null && ref.distance >= 1.0) return 'keyword';
+	if (ref.keyword_rank != null) return 'hybrid';
+	return 'vector';
+}
+
+export function sortChunkRefs(refs: RetrievedChunkRef[]): RetrievedChunkRef[] {
+	return [...refs].sort((a, b) => {
+		// If rerank scores exist, sort by rerank descending
+		if (a.rerank_score != null && b.rerank_score != null) return b.rerank_score - a.rerank_score;
+		if (a.rerank_score != null) return -1;
+		if (b.rerank_score != null) return 1;
+		// Otherwise sort by distance ascending (lower = more similar)
+		return a.distance - b.distance;
+	});
+}
+
+export interface MessageResponse {
 	id: number;
 	question: string;
 	answer: string;
@@ -103,6 +126,25 @@ export interface ConversationResponse {
 	tokens_out: number;
 	retrieved_chunks: RetrievedChunkRef[];
 	created_at: string;
+}
+
+export interface ConversationSummaryResponse {
+	id: number;
+	session_id: string;
+	title: string | null;
+	message_count: number;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ConversationDetailResponse {
+	id: number;
+	session_id: string;
+	title: string | null;
+	messages: MessageResponse[];
+	message_count: number;
+	created_at: string;
+	updated_at: string;
 }
 
 export interface ChunkDetail {
@@ -114,7 +156,7 @@ export interface ChunkDetail {
 
 export interface ConversationListResponse {
 	model_slug: string;
-	conversations: ConversationResponse[];
+	conversations: ConversationSummaryResponse[];
 	total: number;
 	limit: number;
 	offset: number;

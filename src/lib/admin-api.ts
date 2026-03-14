@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, ConversationListResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse } from './admin-types';
+import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse } from './admin-types';
 
 const baseUrl = () => env.PUBLIC_RAGR_API_URL;
 
@@ -82,6 +82,11 @@ export async function getStats(slug: string): Promise<StatsResponse> {
 // Conversations
 export async function getConversations(slug: string, limit = 50, offset = 0): Promise<ConversationListResponse> {
 	const res = await authedFetch(`/models/${slug}/conversations?limit=${limit}&offset=${offset}`);
+	return res.json();
+}
+
+export async function getConversationMessages(slug: string, conversationId: number): Promise<ConversationDetailResponse> {
+	const res = await authedFetch(`/models/${slug}/conversations/${conversationId}/messages`);
 	return res.json();
 }
 

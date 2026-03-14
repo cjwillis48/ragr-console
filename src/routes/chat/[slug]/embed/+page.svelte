@@ -34,6 +34,7 @@
 	const LAUNCHER_HINT_MS = 6500;
 	let launcherHintTimeout: ReturnType<typeof setTimeout> | undefined;
 	let abortController: AbortController | null = null;
+	const slug = $derived(page.params.slug!);
 
 	function clamp(value: number, min: number, max: number): number {
 		return Math.min(Math.max(value, min), max);
@@ -81,8 +82,8 @@
 
 		try {
 			const [info, themeData] = await Promise.all([
-				fetchModelInfo(page.params.slug),
-				fetchTheme(page.params.slug)
+				fetchModelInfo(slug),
+				fetchTheme(slug)
 			]);
 			modelInfo = info;
 			theme = themeData;
@@ -146,7 +147,7 @@
 		abortController = new AbortController();
 		let finalContent = '';
 
-		await streamChat(page.params.slug, question, sessionId, {
+		await streamChat(slug, question, sessionId, {
 			onDelta(delta) {
 				finalContent += delta;
 				messages = messages.map((m) =>
