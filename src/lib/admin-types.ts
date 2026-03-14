@@ -100,9 +100,10 @@ export interface RetrievedChunkRef {
 export function chunkRetrievalMethod(ref: RetrievedChunkRef): string {
 	if (ref.retrieval_method) return ref.retrieval_method;
 	// Fallback for data written before the backfill migration
-	if (ref.rerank_score != null) return 'rerank';
-	if (ref.keyword_rank != null && ref.distance >= 1.0) return 'keyword';
-	if (ref.keyword_rank != null) return 'hybrid';
+	const hasVector = ref.distance < 1.0;
+	const hasKeyword = ref.keyword_rank != null;
+	if (hasVector && hasKeyword) return 'hybrid';
+	if (hasKeyword) return 'keyword';
 	return 'vector';
 }
 

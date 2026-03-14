@@ -992,13 +992,11 @@
 																	<span class="text-[10px] font-mono text-text-muted">
 																		{chunk.source_identifier} &middot; {chunk.content_type}
 																	</span>
-																	<span class="text-[10px] px-1.5 py-0.5 rounded {method === 'rerank'
-																		? 'bg-purple-500/20 text-purple-400'
-																		: method === 'keyword'
-																			? 'bg-blue-500/20 text-blue-400'
-																			: method === 'hybrid'
-																				? 'bg-cyan-500/20 text-cyan-400'
-																				: 'bg-emerald-500/20 text-emerald-400'}">{method}</span>
+																	<span class="text-[10px] px-1.5 py-0.5 rounded {method === 'keyword'
+																		? 'bg-blue-500/20 text-blue-400'
+																		: method === 'hybrid'
+																			? 'bg-purple-500/20 text-purple-400'
+																			: 'bg-emerald-500/20 text-emerald-400'}">{method}</span>
 																</div>
 																<span class="text-[10px] text-text-muted">
 																	dist: {ref.distance.toFixed(3)}{ref.rerank_score != null ? ` · rerank: ${ref.rerank_score.toFixed(3)}` : ''}{ref.keyword_rank != null ? ` · kw: ${ref.keyword_rank}` : ''}
