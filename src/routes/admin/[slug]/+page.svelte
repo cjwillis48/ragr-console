@@ -2,10 +2,11 @@
 	import { page } from '$app/state';
 	import { env } from '$env/dynamic/public';
 	import { onMount } from 'svelte';
-	import { getModel, updateModel, getTheme, updateTheme, getStats, getConversations, getConversationMessages, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, listApiKeys, createApiKey, revokeApiKey } from '$lib/admin-api';
-	import type { RagModel, RagModelUpdate, WidgetTheme, StatsResponse, ConversationSummaryResponse, MessageResponse, SourceResponse, CreateSourceRequest, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse } from '$lib/admin-types';
+	import { getModel, updateModel, getTheme, updateTheme, getStats, getConversations, getConversationMessages, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, listApiKeys, createApiKey, revokeApiKey, getSystemPromptHistory, rollbackSystemPrompt, streamGenerateSystemPrompt, acceptGeneratedPrompt } from '$lib/admin-api';
+	import type { RagModel, RagModelUpdate, WidgetTheme, StatsResponse, ConversationSummaryResponse, MessageResponse, SourceResponse, CreateSourceRequest, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from '$lib/admin-types';
 	import { chunkRetrievalMethod, sortChunkRefs } from '$lib/admin-types';
 	import ChatPanel from '$lib/components/ChatPanel.svelte';
+	import { addToast } from '$lib/toast.svelte';
 
 	const slug = $derived(page.params.slug!);
 
@@ -20,8 +21,9 @@
 	let loadingMessages = $state(false);
 	let sources = $state<SourceResponse[]>([]);
 	let loading = $state(true);
-	let error = $state<string | null>(null);
-	let success = $state<string | null>(null);
+	let loadError = $state<string | null>(null);
+	let saveSuccess = $state(false);
+	let themeSuccess = $state(false);
 	const validTabs: Tab[] = ['settings', 'widget', 'sources', 'conversations', 'api-keys', 'stats'];
 	function getInitialTab(): Tab {
 		if (typeof window === 'undefined') return 'settings';
@@ -34,6 +36,14 @@
 	// API key inputs (never populated from GET — write-only)
 	let anthropicKeyInput = $state('');
 	let voyageKeyInput = $state('');
+
+	// System prompt magic generation
+	let generatingPrompt = $state(false);
+	let generatedPrompt = $state('');
+	let generationInput = $state('');
+	let showGeneratedPreview = $state(false);
+	let promptHistory = $state<SystemPromptHistoryEntry[]>([]);
+	let showPromptHistory = $state(false);
 
 	// Source add form
 	let sourceType = $state<'url' | 'text' | 'upload'>('url');
@@ -120,11 +130,11 @@
 
 	async function loadModel() {
 		loading = true;
-		error = null;
+		loadError = null;
 		try {
 			model = await getModel(slug);
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to load model';
+			loadError = e instanceof Error ? e.message : 'Failed to load model';
 		} finally {
 			loading = false;
 		}
@@ -133,8 +143,6 @@
 	async function loadTab(tab: Tab) {
 		activeTab = tab;
 		window.location.hash = tab;
-		error = null;
-		success = null;
 		if (tab !== 'sources') stopSourcePolling();
 		try {
 			if (tab === 'widget') {
@@ -153,15 +161,69 @@
 				newlyCreatedKey = null;
 			}
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to load data';
+			addToast(e instanceof Error ? e.message : 'Failed to load data', 'error');
+		}
+	}
+
+	async function handleGeneratePrompt() {
+		if (!model) return;
+		generatingPrompt = true;
+		generatedPrompt = '';
+		generationInput = model.system_prompt || '';
+		showGeneratedPreview = true;
+		try {
+			await streamGenerateSystemPrompt(
+				slug,
+				model.system_prompt || '',
+				(token) => { generatedPrompt += token; },
+				() => { generatingPrompt = false; },
+				(err) => { addToast(err, 'error'); generatingPrompt = false; }
+			);
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Generation failed', 'error');
+			generatingPrompt = false;
+		}
+	}
+
+	async function handleAcceptGenerated() {
+		if (!model || !generatedPrompt) return;
+		try {
+			await acceptGeneratedPrompt(slug, generatedPrompt, generationInput);
+			model.system_prompt = generatedPrompt;
+			showGeneratedPreview = false;
+			generatedPrompt = '';
+			addToast('System prompt updated', 'success');
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Failed to accept prompt', 'error');
+		}
+	}
+
+	async function handleLoadPromptHistory() {
+		showPromptHistory = !showPromptHistory;
+		if (!showPromptHistory) return;
+		try {
+			promptHistory = await getSystemPromptHistory(slug);
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Failed to load history', 'error');
+		}
+	}
+
+	async function handleRollbackPrompt(entry: SystemPromptHistoryEntry) {
+		if (!model) return;
+		if (!confirm('Restore this system prompt? The current prompt will be saved to history.')) return;
+		try {
+			await rollbackSystemPrompt(slug, entry.id);
+			model.system_prompt = entry.prompt_text;
+			promptHistory = await getSystemPromptHistory(slug);
+			addToast('System prompt restored', 'success');
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Failed to rollback', 'error');
 		}
 	}
 
 	async function handleSave() {
 		if (!model) return;
 		saving = true;
-		error = null;
-		success = null;
 		try {
 			const update: RagModelUpdate = {
 				name: model.name,
@@ -186,9 +248,11 @@
 			model = await updateModel(slug, update);
 			anthropicKeyInput = '';
 			voyageKeyInput = '';
-			success = 'Saved successfully';
+			addToast('Saved successfully', 'success');
+			saveSuccess = true;
+			setTimeout(() => saveSuccess = false, 1500);
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to save';
+			addToast(e instanceof Error ? e.message : 'Failed to save', 'error');
 		} finally {
 			saving = false;
 		}
@@ -196,8 +260,6 @@
 
 	async function handleAddSource() {
 		addingSource = true;
-		error = null;
-		success = null;
 		try {
 			const req: CreateSourceRequest = {};
 			if (sourceType === 'url') {
@@ -208,7 +270,7 @@
 				req.source_identifier = sourceIdentifier.trim() || 'manual-text';
 			}
 			const res = await createSource(slug, req);
-			success = res.message || 'Source added — processing...';
+			addToast(res.message || 'Source added — processing...', 'success');
 			const identifier = sourceUrl.trim() || sourceIdentifier.trim() || 'manual-text';
 			sourceUrl = '';
 			sourceText = '';
@@ -228,7 +290,7 @@
 			}
 			startSourcePolling();
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to add source';
+			addToast(e instanceof Error ? e.message : 'Failed to add source', 'error');
 		} finally {
 			addingSource = false;
 		}
@@ -246,7 +308,7 @@
 		try {
 			chunksData = await getSourceChunks(slug, sourceId);
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to load chunks';
+			addToast(e instanceof Error ? e.message : 'Failed to load chunks', 'error');
 			chunksSourceId = null;
 		} finally {
 			loadingChunks = false;
@@ -270,7 +332,7 @@
 			const detail = await getConversationMessages(slug, convId);
 			conversationMessages = detail.messages;
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to load messages';
+			addToast(e instanceof Error ? e.message : 'Failed to load messages', 'error');
 			expandedConversationId = null;
 		} finally {
 			loadingMessages = false;
@@ -291,7 +353,7 @@
 			const ids = msg.retrieved_chunks.map(c => c.chunk_id);
 			msgChunks = await getChunksByIds(slug, ids);
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to load chunks';
+			addToast(e instanceof Error ? e.message : 'Failed to load chunks', 'error');
 			expandedMsgId = null;
 		} finally {
 			loadingMsgChunks = false;
@@ -301,10 +363,9 @@
 	async function handleUpload() {
 		if (!fileInput?.files?.length) return;
 		addingSource = true;
-		error = null;
 		try {
 			const results = await uploadSources(slug, fileInput.files);
-			success = `Uploaded ${results.length} file(s) — processing...`;
+			addToast(`Uploaded ${results.length} file(s) — processing...`, 'success');
 			fileInput.value = '';
 			// Add placeholder sources immediately so user sees them as "processing"
 			for (const r of results) {
@@ -324,7 +385,7 @@
 			}
 			startSourcePolling();
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Upload failed';
+			addToast(e instanceof Error ? e.message : 'Upload failed', 'error');
 		} finally {
 			addingSource = false;
 		}
@@ -336,7 +397,7 @@
 			await deleteSource(slug, id);
 			await loadTab('sources');
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to delete source';
+			addToast(e instanceof Error ? e.message : 'Failed to delete source', 'error');
 		}
 	}
 
@@ -345,9 +406,9 @@
 		try {
 			await deleteAllSources(slug);
 			await loadTab('sources');
-			success = 'All sources purged';
+			addToast('All sources purged', 'success');
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to purge';
+			addToast(e instanceof Error ? e.message : 'Failed to purge', 'error');
 		}
 	}
 
@@ -381,13 +442,13 @@
 
 	async function handleSaveTheme() {
 		savingTheme = true;
-		error = null;
-		success = null;
 		try {
 			theme = await updateTheme(slug, theme);
-			success = 'Theme saved';
+			addToast('Theme saved', 'success');
+			themeSuccess = true;
+			setTimeout(() => themeSuccess = false, 1500);
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to save theme';
+			addToast(e instanceof Error ? e.message : 'Failed to save theme', 'error');
 		} finally {
 			savingTheme = false;
 		}
@@ -396,13 +457,12 @@
 	async function handleCreateKey() {
 		if (!newKeyLabel.trim()) return;
 		creatingKey = true;
-		error = null;
 		try {
 			newlyCreatedKey = await createApiKey(slug, newKeyLabel.trim());
 			newKeyLabel = '';
 			apiKeys = await listApiKeys(slug);
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to create key';
+			addToast(e instanceof Error ? e.message : 'Failed to create key', 'error');
 		} finally {
 			creatingKey = false;
 		}
@@ -414,7 +474,7 @@
 			await revokeApiKey(slug, keyId);
 			apiKeys = await listApiKeys(slug);
 		} catch (e: unknown) {
-			error = e instanceof Error ? e.message : 'Failed to revoke key';
+			addToast(e instanceof Error ? e.message : 'Failed to revoke key', 'error');
 		}
 	}
 
@@ -468,11 +528,8 @@
 		{/each}
 	</div>
 
-	{#if error}
-		<div class="bg-error/10 border border-error/30 rounded-lg px-4 py-3 text-sm text-error mb-4">{error}</div>
-	{/if}
-	{#if success}
-		<div class="bg-green-500/10 border border-green-500/30 rounded-lg px-4 py-3 text-sm text-green-400 mb-4">{success}</div>
+	{#if loadError}
+		<div class="bg-error/10 border border-error/30 rounded-lg px-4 py-3 text-sm text-error mb-4">{loadError}</div>
 	{/if}
 
 	<!-- Settings Tab -->
@@ -488,10 +545,96 @@
 					<span class="text-sm text-text-muted">Description</span>
 					<textarea bind:value={model.description} rows="2" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent resize-none"></textarea>
 				</label>
-				<label class="block">
-					<span class="text-sm text-text-muted">System Prompt</span>
+				<div class="block">
+					<div class="flex items-center justify-between">
+						<span class="text-sm text-text-muted">System Prompt</span>
+						<div class="flex items-center gap-2">
+							<button
+								type="button"
+								onclick={handleLoadPromptHistory}
+								class="text-xs text-text-muted hover:text-accent"
+							>
+								{showPromptHistory ? 'Hide History' : 'History'}
+							</button>
+							<button
+								type="button"
+								onclick={handleGeneratePrompt}
+								disabled={generatingPrompt}
+								class="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-40"
+							>
+								{generatingPrompt ? 'Generating...' : '✨ Magic'}
+							</button>
+						</div>
+					</div>
 					<textarea bind:value={model.system_prompt} rows="4" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent resize-y"></textarea>
-				</label>
+
+					{#if showGeneratedPreview}
+						<div class="mt-2 bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 space-y-3">
+							<div class="flex items-center justify-between">
+								<span class="text-sm font-medium text-purple-400">Generated Prompt</span>
+								<button type="button" onclick={() => { showGeneratedPreview = false; generatedPrompt = ''; }} class="text-xs text-text-muted hover:text-text">&times;</button>
+							</div>
+							<pre class="text-sm text-text whitespace-pre-wrap font-mono bg-surface rounded-lg p-3 max-h-64 overflow-y-auto">{generatedPrompt}{#if generatingPrompt}<span class="animate-pulse">|</span>{/if}</pre>
+							{#if !generatingPrompt && generatedPrompt}
+								<div class="flex gap-2">
+									<button
+										type="button"
+										onclick={handleAcceptGenerated}
+										class="rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90"
+									>
+										Accept
+									</button>
+									<button
+										type="button"
+										onclick={() => { if (model) model.system_prompt = generatedPrompt; showGeneratedPreview = false; generatedPrompt = ''; }}
+										class="rounded-lg bg-surface-alt border border-border px-4 py-2 text-sm text-text-muted hover:text-text"
+									>
+										Copy to Editor
+									</button>
+									<button
+										type="button"
+										onclick={() => { showGeneratedPreview = false; generatedPrompt = ''; }}
+										class="text-sm text-text-muted hover:text-text px-2"
+									>
+										Discard
+									</button>
+								</div>
+							{/if}
+						</div>
+					{/if}
+
+					{#if showPromptHistory}
+						<div class="mt-2 space-y-2">
+							{#if promptHistory.length === 0}
+								<div class="text-text-muted text-sm">No history yet.</div>
+							{:else}
+								{#each promptHistory as entry}
+									<div class="bg-surface-alt border border-border rounded-lg p-3">
+										<div class="flex items-center justify-between mb-1">
+											<div class="flex items-center gap-2">
+												<span class="text-[10px] px-1.5 py-0.5 rounded {entry.source === 'generated'
+													? 'bg-purple-500/20 text-purple-400'
+													: 'bg-surface border border-border text-text-muted'}">{entry.source}</span>
+												<span class="text-xs text-text-muted">{new Date(entry.created_at).toLocaleString()}</span>
+											</div>
+											<button
+												type="button"
+												onclick={() => handleRollbackPrompt(entry)}
+												class="text-xs text-accent hover:underline"
+											>
+												Restore
+											</button>
+										</div>
+										{#if entry.input_text}
+											<div class="text-[10px] text-text-muted mb-1">Input: {entry.input_text.slice(0, 100)}{entry.input_text.length > 100 ? '...' : ''}</div>
+										{/if}
+										<pre class="text-xs text-text whitespace-pre-wrap font-mono max-h-24 overflow-y-auto">{entry.prompt_text}</pre>
+									</div>
+								{/each}
+							{/if}
+						</div>
+					{/if}
+				</div>
 			</fieldset>
 
 			<fieldset class="space-y-4">
@@ -626,9 +769,9 @@
 			<button
 				type="submit"
 				disabled={saving}
-				class="rounded-lg bg-accent px-6 py-2 text-white font-medium hover:bg-accent/90 disabled:opacity-40"
+				class="rounded-lg px-6 py-2 text-white font-medium transition-colors duration-200 disabled:opacity-40 {saveSuccess ? 'bg-green-600' : 'bg-accent hover:bg-accent/90'}"
 			>
-				{saving ? 'Saving...' : 'Save Changes'}
+				{saving ? 'Saving...' : saveSuccess ? '\u2713 Saved' : 'Save Changes'}
 			</button>
 		</form>
 
@@ -727,9 +870,9 @@
 				<button
 					type="submit"
 					disabled={savingTheme}
-					class="rounded-lg bg-accent px-6 py-2 text-white font-medium hover:bg-accent/90 disabled:opacity-40"
+					class="rounded-lg px-6 py-2 text-white font-medium transition-colors duration-200 disabled:opacity-40 {themeSuccess ? 'bg-green-600' : 'bg-accent hover:bg-accent/90'}"
 				>
-					{savingTheme ? 'Saving...' : 'Save Theme'}
+					{savingTheme ? 'Saving...' : themeSuccess ? '\u2713 Saved' : 'Save Theme'}
 				</button>
 			</form>
 

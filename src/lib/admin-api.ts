@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse } from './admin-types';
+import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from './admin-types';
 
 const baseUrl = () => env.PUBLIC_RAGR_API_URL;
 
@@ -198,4 +198,83 @@ export async function createApiKey(slug: string, label: string): Promise<ApiKeyC
 
 export async function revokeApiKey(slug: string, keyId: number): Promise<void> {
 	await authedFetch(`/models/${slug}/api-keys/${keyId}`, { method: 'DELETE' });
+}
+
+// System Prompt
+export async function getSystemPromptHistory(slug: string): Promise<SystemPromptHistoryEntry[]> {
+	const res = await authedFetch(`/models/${slug}/system-prompt-history`);
+	return res.json();
+}
+
+export async function rollbackSystemPrompt(slug: string, historyId: number): Promise<SystemPromptHistoryEntry> {
+	const res = await authedFetch(`/models/${slug}/system-prompt-history/${historyId}/rollback`, { method: 'POST' });
+	return res.json();
+}
+
+export async function streamGenerateSystemPrompt(
+	slug: string,
+	inputText: string,
+	onToken: (text: string) => void,
+	onDone: () => void,
+	onError: (err: string) => void
+): Promise<void> {
+	const auth = await getAuthHeader();
+	const res = await fetch(`${baseUrl()}/models/${slug}/generate-system-prompt`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			authorization: auth,
+		},
+		body: JSON.stringify({ input_text: inputText }),
+	});
+	if (!res.ok) {
+		const body = await res.text();
+		onError(`${res.status}: ${body}`);
+		return;
+	}
+	const reader = res.body?.getReader();
+	if (!reader) { onError('No response body'); return; }
+	const decoder = new TextDecoder();
+	let buffer = '';
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		buffer += decoder.decode(value, { stream: true });
+		const lines = buffer.split('\n');
+		buffer = lines.pop() || '';
+		for (const line of lines) {
+			if (line.startsWith('event: done')) {
+				onDone();
+				return;
+			}
+			if (line.startsWith('event: error')) {
+				continue; // next line has the data
+			}
+			if (line.startsWith('data: ')) {
+				const payload = line.slice(6);
+				try {
+					const parsed = JSON.parse(payload);
+					if (typeof parsed === 'string') {
+						onToken(parsed);
+					} else if (parsed.error) {
+						onError(parsed.error);
+						return;
+					}
+				} catch { /* skip malformed */ }
+			}
+		}
+	}
+	onDone();
+}
+
+export async function acceptGeneratedPrompt(
+	slug: string,
+	promptText: string,
+	inputText: string
+): Promise<SystemPromptHistoryEntry> {
+	const res = await authedFetch(`/models/${slug}/system-prompt-history/accept-generated`, {
+		method: 'POST',
+		body: JSON.stringify({ prompt_text: promptText, input_text: inputText }),
+	});
+	return res.json();
 }

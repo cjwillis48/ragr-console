@@ -2,6 +2,7 @@
 	import { UserButton } from 'svelte-clerk';
 	import { useClerkContext } from 'svelte-clerk/client';
 	import { setTokenGetter } from '$lib/admin-api';
+	import Toast from '$lib/components/Toast.svelte';
 
 	let { children } = $props();
 
@@ -30,3 +31,4 @@
 		{/if}
 	</main>
 </div>
+<Toast />

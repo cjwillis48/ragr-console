@@ -250,3 +250,11 @@ export interface ApiKeyCreateResponse {
 	raw_key: string;
 	created_at: string;
 }
+
+export interface SystemPromptHistoryEntry {
+	id: number;
+	prompt_text: string;
+	source: string;
+	input_text: string | null;
+	created_at: string;
+}
