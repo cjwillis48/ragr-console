@@ -47,7 +47,10 @@
 
 	// Source add form
 	let sourceType = $state<'url' | 'text' | 'upload'>('url');
-	let sourceUrl = $state('');
+	let sourceUrlText = $state('');
+	let parsedUrls = $derived(
+		sourceUrlText.split('\n').map(u => u.trim()).filter(u => u.length > 0)
+	);
 	let sourceText = $state('');
 	let sourceIdentifier = $state('');
 	let addingSource = $state(false);
@@ -237,6 +240,7 @@
 				generation_model: model.generation_model,
 				reranker_enabled: model.reranker_enabled,
 				rerank_model: model.rerank_model,
+				keyword_search_enabled: model.keyword_search_enabled,
 				allowed_origins: model.allowed_origins,
 				hosted_chat: model.hosted_chat,
 				history_turns: model.history_turns,
@@ -263,31 +267,57 @@
 		try {
 			const req: CreateSourceRequest = {};
 			if (sourceType === 'url') {
-				req.url = sourceUrl.trim();
-				req.source_identifier = sourceUrl.trim();
+				if (parsedUrls.length === 1) {
+					req.url = parsedUrls[0];
+					req.source_identifier = parsedUrls[0];
+				} else {
+					req.urls = parsedUrls;
+				}
 			} else if (sourceType === 'text') {
 				req.content = sourceText;
 				req.source_identifier = sourceIdentifier.trim() || 'manual-text';
 			}
 			const res = await createSource(slug, req);
-			addToast(res.message || 'Source added — processing...', 'success');
-			const identifier = sourceUrl.trim() || sourceIdentifier.trim() || 'manual-text';
-			sourceUrl = '';
+			const count = sourceType === 'url' ? parsedUrls.length : 1;
+			addToast(res.message || `${count} source(s) added — processing...`, 'success');
+
+			// Add placeholder entries for URLs
+			if (sourceType === 'url') {
+				for (const url of parsedUrls) {
+					if (!sources.find(s => s.source_identifier === url)) {
+						sources = [...sources, {
+							id: 0,
+							source_identifier: url,
+							source_url: '',
+							content_type: '',
+							status: res.status || 'processing',
+							chunk_count: 0,
+							embedding_cost: 0,
+							ingested_at: new Date().toISOString(),
+							updated_at: new Date().toISOString()
+						}];
+					}
+				}
+			} else {
+				const identifier = sourceIdentifier.trim() || 'manual-text';
+				if (!sources.find(s => s.source_identifier === identifier)) {
+					sources = [...sources, {
+						id: 0,
+						source_identifier: res.source_identifier || identifier,
+						source_url: '',
+						content_type: '',
+						status: res.status || 'processing',
+						chunk_count: res.chunks_created ?? 0,
+						embedding_cost: 0,
+						ingested_at: new Date().toISOString(),
+						updated_at: new Date().toISOString()
+					}];
+				}
+			}
+
+			sourceUrlText = '';
 			sourceText = '';
 			sourceIdentifier = '';
-			if (!sources.find(s => s.source_identifier === identifier)) {
-				sources = [...sources, {
-					id: 0,
-					source_identifier: res.source_identifier || identifier,
-					source_url: '',
-					content_type: '',
-					status: res.status || 'processing',
-					chunk_count: res.chunks_created ?? 0,
-					embedding_cost: 0,
-					ingested_at: new Date().toISOString(),
-					updated_at: new Date().toISOString()
-				}];
-			}
 			startSourcePolling();
 		} catch (e: unknown) {
 			addToast(e instanceof Error ? e.message : 'Failed to add source', 'error');
@@ -670,6 +700,10 @@
 					<input bind:value={model.generation_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
 				</label>
 				<label class="flex items-center gap-2">
+					<input type="checkbox" bind:checked={model.keyword_search_enabled} class="accent-accent" />
+					<span class="text-sm text-text-muted">Keyword Search (tsquery)</span>
+				</label>
+				<label class="flex items-center gap-2">
 					<input type="checkbox" bind:checked={model.reranker_enabled} class="accent-accent" />
 					<span class="text-sm text-text-muted">Reranker Enabled</span>
 				</label>
@@ -964,11 +998,25 @@
 				</div>
 
 				{#if sourceType === 'url'}
-					<form onsubmit={(e) => { e.preventDefault(); handleAddSource(); }} class="flex gap-2">
-						<input bind:value={sourceUrl} placeholder="https://example.com/page" class="flex-1 rounded-lg bg-surface border border-border px-3 py-2 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
-						<button type="submit" disabled={addingSource || !sourceUrl.trim()} class="rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-40">
-							{addingSource ? 'Adding...' : 'Add'}
-						</button>
+					<form onsubmit={(e) => { e.preventDefault(); handleAddSource(); }} class="space-y-2">
+						<textarea
+							bind:value={sourceUrlText}
+							rows="3"
+							placeholder="https://example.com/page-1"
+							class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm text-text font-mono placeholder:text-text-muted focus:outline-none focus:border-accent resize-y"
+						></textarea>
+						<div class="flex items-center justify-between">
+							<span class="text-xs text-text-muted">
+								{#if parsedUrls.length > 0}
+									{parsedUrls.length} URL{parsedUrls.length !== 1 ? 's' : ''} ready
+								{:else}
+									One URL per line
+								{/if}
+							</span>
+							<button type="submit" disabled={addingSource || parsedUrls.length === 0} class="rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-40">
+								{addingSource ? 'Adding...' : parsedUrls.length > 1 ? `Add ${parsedUrls.length} URLs` : 'Add'}
+							</button>
+						</div>
 					</form>
 				{:else if sourceType === 'text'}
 					<form onsubmit={(e) => { e.preventDefault(); handleAddSource(); }} class="space-y-2">
@@ -1046,7 +1094,10 @@
 					{/each}
 				</div>
 			{:else}
-				<div class="text-text-muted text-sm">No sources yet.</div>
+				<div class="border border-dashed border-border rounded-lg p-8 text-center">
+					<p class="text-text-muted text-sm">No sources yet</p>
+					<p class="text-text-muted text-xs mt-1">Add URLs, paste text, or upload files above to give your model knowledge.</p>
+				</div>
 			{/if}
 		</div>
 
