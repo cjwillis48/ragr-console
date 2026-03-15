@@ -99,6 +99,10 @@ export async function deleteConversation(slug: string, conversationId: number): 
 	await authedFetch(`/models/${slug}/conversations/${conversationId}`, { method: 'DELETE' });
 }
 
+export async function deleteMessage(slug: string, conversationId: number, messageId: number): Promise<void> {
+	await authedFetch(`/models/${slug}/conversations/${conversationId}/messages/${messageId}`, { method: 'DELETE' });
+}
+
 export async function getConversationMessages(slug: string, conversationId: number): Promise<ConversationDetailResponse> {
 	const res = await authedFetch(`/models/${slug}/conversations/${conversationId}/messages`);
 	return res.json();

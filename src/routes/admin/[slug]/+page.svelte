@@ -3,7 +3,7 @@
 	import { env } from '$env/dynamic/public';
 	import { onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
-	import { getModel, updateModel, getTheme, updateTheme, getStats, getDailyStats, getTopSources, getConversations, getConversationMessages, deleteConversation, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, crawlSite, listApiKeys, createApiKey, revokeApiKey, getSystemPromptHistory, rollbackSystemPrompt, streamGenerateSystemPrompt, acceptGeneratedPrompt } from '$lib/admin-api';
+	import { getModel, updateModel, getTheme, updateTheme, getStats, getDailyStats, getTopSources, getConversations, getConversationMessages, deleteConversation, deleteMessage, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, crawlSite, listApiKeys, createApiKey, revokeApiKey, getSystemPromptHistory, rollbackSystemPrompt, streamGenerateSystemPrompt, acceptGeneratedPrompt } from '$lib/admin-api';
 	import type { RagModel, RagModelUpdate, WidgetTheme, StatsResponse, DailyStatsEntry, TopSourceEntry, ConversationSummaryResponse, MessageResponse, SourceResponse, CreateSourceRequest, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from '$lib/admin-types';
 	import { chunkRetrievalMethod, sortChunkRefs } from '$lib/admin-types';
 	import ChatPanel from '$lib/components/ChatPanel.svelte';
@@ -365,6 +365,21 @@
 			chunksSourceId = null;
 		} finally {
 			loadingChunks = false;
+		}
+	}
+
+	async function handleDeleteMessage(convId: number, msgId: number) {
+		if (!confirm('Delete this message?')) return;
+		try {
+			await deleteMessage(slug, convId, msgId);
+			conversationMessages = conversationMessages.filter(m => m.id !== msgId);
+			if (expandedMsgId === msgId) {
+				expandedMsgId = null;
+				msgChunks = [];
+			}
+			addToast('Message deleted', 'success');
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Failed to delete message', 'error');
 		}
 	}
 
@@ -1246,6 +1261,13 @@
 											</span>
 											<span class="flex items-center gap-2">
 												<span class="text-xs text-text-muted">{new Date(msg.created_at).toLocaleString()}</span>
+												<span
+													role="button"
+													tabindex="0"
+													onclick={(e) => { e.stopPropagation(); handleDeleteMessage(conv.id, msg.id); }}
+													onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleDeleteMessage(conv.id, msg.id); } }}
+													class="text-xs text-text-muted hover:text-error cursor-pointer"
+												>Delete</span>
 												<span class="text-xs text-text-muted">{expandedMsgId === msg.id ? '▲' : '▼'}</span>
 											</span>
 										</span>
