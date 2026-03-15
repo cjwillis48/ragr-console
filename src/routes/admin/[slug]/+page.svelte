@@ -3,8 +3,8 @@
 	import { env } from '$env/dynamic/public';
 	import { onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
-	import { getModel, updateModel, getTheme, updateTheme, getStats, getConversations, getConversationMessages, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, crawlSite, listApiKeys, createApiKey, revokeApiKey, getSystemPromptHistory, rollbackSystemPrompt, streamGenerateSystemPrompt, acceptGeneratedPrompt } from '$lib/admin-api';
-	import type { RagModel, RagModelUpdate, WidgetTheme, StatsResponse, ConversationSummaryResponse, MessageResponse, SourceResponse, CreateSourceRequest, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from '$lib/admin-types';
+	import { getModel, updateModel, getTheme, updateTheme, getStats, getDailyStats, getTopSources, getConversations, getConversationMessages, deleteConversation, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, crawlSite, listApiKeys, createApiKey, revokeApiKey, getSystemPromptHistory, rollbackSystemPrompt, streamGenerateSystemPrompt, acceptGeneratedPrompt } from '$lib/admin-api';
+	import type { RagModel, RagModelUpdate, WidgetTheme, StatsResponse, DailyStatsEntry, TopSourceEntry, ConversationSummaryResponse, MessageResponse, SourceResponse, CreateSourceRequest, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from '$lib/admin-types';
 	import { chunkRetrievalMethod, sortChunkRefs } from '$lib/admin-types';
 	import ChatPanel from '$lib/components/ChatPanel.svelte';
 	import { addToast } from '$lib/toast.svelte';
@@ -15,6 +15,8 @@
 
 	let model = $state<RagModel | null>(null);
 	let stats = $state<StatsResponse | null>(null);
+	let dailyStats = $state<DailyStatsEntry[]>([]);
+	let topSources = $state<TopSourceEntry[]>([]);
 	let conversations = $state<ConversationSummaryResponse[]>([]);
 	let conversationsTotal = $state(0);
 	let expandedConversationId = $state<number | null>(null);
@@ -168,7 +170,11 @@
 			if (tab === 'widget') {
 				theme = await getTheme(slug);
 			} else if (tab === 'stats') {
-				stats = await getStats(slug);
+				[stats, dailyStats, topSources] = await Promise.all([
+					getStats(slug),
+					getDailyStats(slug),
+					getTopSources(slug)
+				]);
 			} else if (tab === 'conversations') {
 				const res = await getConversations(slug);
 				conversations = res.conversations;
@@ -359,6 +365,22 @@
 			chunksSourceId = null;
 		} finally {
 			loadingChunks = false;
+		}
+	}
+
+	async function handleDeleteConversation(convId: number) {
+		if (!confirm('Hide this conversation? It will be removed from the UI but preserved in the database.')) return;
+		try {
+			await deleteConversation(slug, convId);
+			conversations = conversations.filter(c => c.id !== convId);
+			conversationsTotal--;
+			if (expandedConversationId === convId) {
+				expandedConversationId = null;
+				conversationMessages = [];
+			}
+			addToast('Conversation hidden', 'success');
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Failed to delete conversation', 'error');
 		}
 	}
 
@@ -1187,6 +1209,13 @@
 							<span class="flex items-center gap-3">
 								<span class="text-xs text-text-muted font-mono">{conv.session_id.slice(0, 8)}...</span>
 								<span class="text-xs text-text-muted">{new Date(conv.updated_at).toLocaleString()}</span>
+								<span
+									role="button"
+									tabindex="0"
+									onclick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id); }}
+									onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleDeleteConversation(conv.id); } }}
+									class="text-xs text-text-muted hover:text-error cursor-pointer"
+								>Delete</span>
 								<span class="text-xs text-text-muted">{expandedConversationId === conv.id ? '▲' : '▼'}</span>
 							</span>
 						</span>
@@ -1380,23 +1409,140 @@
 	<!-- Stats Tab -->
 	{:else if activeTab === 'stats'}
 		{#if stats}
-			<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+			<!-- Summary cards -->
+			<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
 				{#each [
-					['Sources', stats.total_sources],
-					['Chunks', stats.total_chunks],
-					['Conversations', stats.total_conversations],
-					['Messages', stats.total_messages],
-					['Unanswered', stats.unanswered_questions],
-					['Month Cost', `$${stats.current_month_cost.toFixed(2)}`],
-					['Budget Limit', `$${stats.budget_limit.toFixed(2)}`],
-					['Remaining', `$${stats.budget_remaining.toFixed(2)}`]
-				] as [label, value]}
+					['Sources', stats.total_sources, ''],
+					['Chunks', stats.total_chunks, ''],
+					['Conversations', stats.total_conversations, ''],
+					['Messages', stats.total_messages, ''],
+					['Unanswered', stats.unanswered_questions, stats.unanswered_questions > 0 ? 'text-yellow-400' : ''],
+					['Month Cost', `$${stats.current_month_cost.toFixed(2)}`, ''],
+					['Budget Limit', `$${stats.budget_limit.toFixed(2)}`, ''],
+					['Remaining', `$${stats.budget_remaining.toFixed(2)}`, stats.budget_remaining < stats.budget_limit * 0.2 ? 'text-red-400' : '']
+				] as [label, value, highlight]}
 					<div class="bg-surface-alt border border-border rounded-lg p-4">
 						<div class="text-sm text-text-muted">{label}</div>
-						<div class="text-xl font-semibold mt-1">{value}</div>
+						<div class="text-xl font-semibold mt-1 {highlight}">{value}</div>
 					</div>
 				{/each}
 			</div>
+
+			<!-- Daily message volume chart -->
+			{#if dailyStats.length > 0}
+				{@const maxMessages = Math.max(...dailyStats.map(d => d.answered + d.unanswered + d.off_topic), 1)}
+				<div class="bg-surface-alt border border-border rounded-lg p-5 mb-8">
+					<h3 class="text-sm font-medium mb-4">Message Volume (30 days)</h3>
+					<div class="flex items-end gap-0.75 h-40">
+						{#each dailyStats as day}
+							{@const total = day.answered + day.unanswered + day.off_topic}
+							{@const pct = (total / maxMessages) * 100}
+							{@const answeredPct = total > 0 ? (day.answered / total) * pct : 0}
+							{@const unansweredPct = total > 0 ? (day.unanswered / total) * pct : 0}
+							{@const offTopicPct = total > 0 ? (day.off_topic / total) * pct : 0}
+							<div class="flex-1 flex flex-col justify-end h-full group relative">
+								{#if total > 0}
+									<div class="flex flex-col justify-end" style="height: {pct}%;">
+										{#if offTopicPct > 0}
+											<div class="bg-yellow-500 rounded-t-sm min-h-0.5" style="height: {(offTopicPct / pct) * 100}%;"></div>
+										{/if}
+										{#if unansweredPct > 0}
+											<div class="bg-red-400 min-h-0.5 {offTopicPct === 0 ? 'rounded-t-sm' : ''}" style="height: {(unansweredPct / pct) * 100}%;"></div>
+										{/if}
+										{#if answeredPct > 0}
+											<div class="bg-green-500 min-h-0.5 {unansweredPct === 0 && offTopicPct === 0 ? 'rounded-t-sm' : ''}" style="height: {(answeredPct / pct) * 100}%;"></div>
+										{/if}
+									</div>
+								{:else}
+									<div class="bg-border/30 rounded-t-sm" style="height: 2px;"></div>
+								{/if}
+								<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-surface border border-border rounded-lg px-3 py-2 text-xs shadow-lg whitespace-nowrap z-10">
+									<div class="font-medium mb-1">{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+									<div class="text-green-400">{day.answered} answered</div>
+									{#if day.unanswered > 0}<div class="text-red-400">{day.unanswered} unanswered</div>{/if}
+									{#if day.off_topic > 0}<div class="text-yellow-400">{day.off_topic} off-topic</div>{/if}
+									<div class="text-text-muted mt-1">{(day.tokens_in + day.tokens_out).toLocaleString()} tokens</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+					<div class="flex justify-between mt-2 text-[10px] text-text-muted">
+						<span>{dailyStats.length > 0 ? new Date(dailyStats[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
+						<span>{dailyStats.length > 0 ? new Date(dailyStats[dailyStats.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
+					</div>
+					<div class="flex gap-4 mt-3 text-xs text-text-muted">
+						<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block"></span> Answered</span>
+						<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-red-400 inline-block"></span> Unanswered</span>
+						<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-yellow-500 inline-block"></span> Off-topic</span>
+					</div>
+				</div>
+
+				<!-- Daily token usage chart -->
+				{@const maxTokens = Math.max(...dailyStats.map(d => d.tokens_in + d.tokens_out), 1)}
+				<div class="bg-surface-alt border border-border rounded-lg p-5 mb-8">
+					<h3 class="text-sm font-medium mb-4">Token Usage (30 days)</h3>
+					<div class="flex items-end gap-0.75 h-28">
+						{#each dailyStats as day}
+							{@const totalTokens = day.tokens_in + day.tokens_out}
+							{@const pct = (totalTokens / maxTokens) * 100}
+							{@const inPct = totalTokens > 0 ? (day.tokens_in / totalTokens) * pct : 0}
+							{@const outPct = totalTokens > 0 ? (day.tokens_out / totalTokens) * pct : 0}
+							<div class="flex-1 flex flex-col justify-end h-full group relative">
+								{#if totalTokens > 0}
+									<div class="flex flex-col justify-end" style="height: {pct}%;">
+										<div class="bg-sky-400 rounded-t-sm min-h-0.5" style="height: {(inPct / pct) * 100}%;"></div>
+										<div class="bg-indigo-500 min-h-0.5" style="height: {(outPct / pct) * 100}%;"></div>
+									</div>
+								{:else}
+									<div class="bg-border/30 rounded-t-sm" style="height: 2px;"></div>
+								{/if}
+								<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-surface border border-border rounded-lg px-3 py-2 text-xs shadow-lg whitespace-nowrap z-10">
+									<div class="font-medium">{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+									<div class="text-sky-400">{day.tokens_in.toLocaleString()} in</div>
+									<div class="text-indigo-400">{day.tokens_out.toLocaleString()} out</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+					<div class="flex justify-between mt-2 text-[10px] text-text-muted">
+						<span>{dailyStats.length > 0 ? new Date(dailyStats[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
+						<span>{dailyStats.length > 0 ? new Date(dailyStats[dailyStats.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>
+					</div>
+					<div class="flex gap-4 mt-3 text-xs text-text-muted">
+						<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-sky-400 inline-block"></span> Input</span>
+						<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block"></span> Output</span>
+					</div>
+				</div>
+			{:else}
+				<div class="border border-dashed border-border rounded-lg p-8 text-center mb-8">
+					<p class="text-text-muted text-sm">No activity data yet</p>
+					<p class="text-text-muted text-xs mt-1">Charts will appear once your model starts receiving messages.</p>
+				</div>
+			{/if}
+
+			<!-- Top sources -->
+			{#if topSources.length > 0}
+				{@const maxRetrievals = topSources[0].retrieval_count}
+				<div class="bg-surface-alt border border-border rounded-lg p-5">
+					<h3 class="text-sm font-medium mb-4">Top Sources by Retrieval</h3>
+					<div class="space-y-2">
+						{#each topSources as source}
+							<div class="flex items-center gap-3">
+								<div class="flex-1 min-w-0">
+									<div class="text-sm truncate">{source.source_identifier}</div>
+									<div class="mt-1 h-2 bg-surface rounded-full overflow-hidden">
+										<div class="h-full bg-accent rounded-full" style="width: {(source.retrieval_count / maxRetrievals) * 100}%;"></div>
+									</div>
+								</div>
+								<div class="text-right shrink-0">
+									<div class="text-sm font-medium">{source.retrieval_count}</div>
+									<div class="text-[10px] text-text-muted">{source.chunk_count} chunks</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		{:else}
 			<div class="text-text-muted text-sm">Loading stats...</div>
 		{/if}

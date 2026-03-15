@@ -254,6 +254,21 @@ export interface ApiKeyCreateResponse {
 	created_at: string;
 }
 
+export interface DailyStatsEntry {
+	date: string;
+	answered: number;
+	unanswered: number;
+	off_topic: number;
+	tokens_in: number;
+	tokens_out: number;
+}
+
+export interface TopSourceEntry {
+	source_identifier: string;
+	retrieval_count: number;
+	chunk_count: number;
+}
+
 export interface SystemPromptHistoryEntry {
 	id: number;
 	prompt_text: string;

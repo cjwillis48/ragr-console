@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from './admin-types';
+import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, DailyStatsEntry, TopSourceEntry, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from './admin-types';
 
 const baseUrl = () => env.PUBLIC_RAGR_API_URL;
 
@@ -79,10 +79,24 @@ export async function getStats(slug: string): Promise<StatsResponse> {
 	return res.json();
 }
 
+export async function getDailyStats(slug: string, days = 30): Promise<DailyStatsEntry[]> {
+	const res = await authedFetch(`/models/${slug}/stats/daily?days=${days}`);
+	return res.json();
+}
+
+export async function getTopSources(slug: string, limit = 10): Promise<TopSourceEntry[]> {
+	const res = await authedFetch(`/models/${slug}/stats/top-sources?limit=${limit}`);
+	return res.json();
+}
+
 // Conversations
 export async function getConversations(slug: string, limit = 50, offset = 0): Promise<ConversationListResponse> {
 	const res = await authedFetch(`/models/${slug}/conversations?limit=${limit}&offset=${offset}`);
 	return res.json();
+}
+
+export async function deleteConversation(slug: string, conversationId: number): Promise<void> {
+	await authedFetch(`/models/${slug}/conversations/${conversationId}`, { method: 'DELETE' });
 }
 
 export async function getConversationMessages(slug: string, conversationId: number): Promise<ConversationDetailResponse> {
