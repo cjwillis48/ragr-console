@@ -90,6 +90,15 @@ export async function getConversationMessages(slug: string, conversationId: numb
 	return res.json();
 }
 
+// Crawl
+export async function crawlSite(slug: string, url: string, maxPages = 50, maxDepth = 3): Promise<{ status: string; message: string; pages_queued: number }> {
+	const res = await authedFetch(`/models/${slug}/sources/crawl`, {
+		method: 'POST',
+		body: JSON.stringify({ url, max_pages: maxPages, max_depth: maxDepth }),
+	});
+	return res.json();
+}
+
 // Sources
 export async function getSources(slug: string): Promise<SourceListResponse> {
 	const res = await authedFetch(`/models/${slug}/sources`);

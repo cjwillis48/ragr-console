@@ -2,7 +2,8 @@
 	import { page } from '$app/state';
 	import { env } from '$env/dynamic/public';
 	import { onMount } from 'svelte';
-	import { getModel, updateModel, getTheme, updateTheme, getStats, getConversations, getConversationMessages, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, listApiKeys, createApiKey, revokeApiKey, getSystemPromptHistory, rollbackSystemPrompt, streamGenerateSystemPrompt, acceptGeneratedPrompt } from '$lib/admin-api';
+	import { slide } from 'svelte/transition';
+	import { getModel, updateModel, getTheme, updateTheme, getStats, getConversations, getConversationMessages, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, crawlSite, listApiKeys, createApiKey, revokeApiKey, getSystemPromptHistory, rollbackSystemPrompt, streamGenerateSystemPrompt, acceptGeneratedPrompt } from '$lib/admin-api';
 	import type { RagModel, RagModelUpdate, WidgetTheme, StatsResponse, ConversationSummaryResponse, MessageResponse, SourceResponse, CreateSourceRequest, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from '$lib/admin-types';
 	import { chunkRetrievalMethod, sortChunkRefs } from '$lib/admin-types';
 	import ChatPanel from '$lib/components/ChatPanel.svelte';
@@ -47,6 +48,10 @@
 
 	// Source add form
 	let sourceType = $state<'url' | 'text' | 'upload'>('url');
+	let crawlEnabled = $state(false);
+	let crawlMaxPages = $state(50);
+	let crawlMaxDepth = $state(3);
+	let crawling = $state(false);
 	let sourceUrlText = $state('');
 	let parsedUrls = $derived(
 		sourceUrlText.split('\n').map(u => u.trim()).filter(u => u.length > 0)
@@ -111,14 +116,26 @@
 		return () => stopSourcePolling();
 	});
 
-	function startSourcePolling() {
+	function startSourcePolling(keepAlive = false) {
 		stopSourcePolling();
+		let stableCount = 0;
+		let lastTotal = 0;
 		sourcePollTimer = setInterval(async () => {
 			try {
 				const res = await getSources(slug);
 				sources = res.sources;
-				if (sources.every((s) => s.status === 'complete' || s.status === 'error')) {
+				const allDone = sources.every((s) => s.status === 'complete' || s.status === 'error');
+				if (allDone && !keepAlive) {
 					stopSourcePolling();
+				} else if (allDone && keepAlive) {
+					// During crawl: stop after source count stabilizes for 10 consecutive polls
+					if (sources.length === lastTotal) {
+						stableCount++;
+						if (stableCount >= 10) stopSourcePolling();
+					} else {
+						lastTotal = sources.length;
+						stableCount = 0;
+					}
 				}
 			} catch { /* ignore polling errors */ }
 		}, 1000);
@@ -390,6 +407,21 @@
 		}
 	}
 
+	async function handleCrawl() {
+		if (parsedUrls.length === 0) return;
+		crawling = true;
+		try {
+			const res = await crawlSite(slug, parsedUrls[0], crawlMaxPages, crawlMaxDepth);
+			addToast(res.message, 'success');
+			sourceUrlText = '';
+			startSourcePolling(true);
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Crawl failed', 'error');
+		} finally {
+			crawling = false;
+		}
+	}
+
 	async function handleUpload() {
 		if (!fileInput?.files?.length) return;
 		addingSource = true;
@@ -461,7 +493,7 @@
 
 	function getEmbedSnippet(): string {
 		const url = `${location.origin}/chat/${model?.slug}/embed`;
-		return `<iframe\n  src="${url}"\n  sandbox="allow-scripts allow-same-origin allow-forms"\n  style="position:fixed;bottom:0;right:0;width:450px;height:650px;border:none;z-index:9999;"\n></iframe>`;
+		return `<iframe\n  src="${url}"\n  title="${model?.name || 'Chat'} Widget"\n  sandbox="allow-scripts allow-same-origin allow-forms"\n  style="position:fixed;bottom:0;right:0;width:450px;height:650px;border:none;z-index:9999;"\n></iframe>`;
 	}
 
 	async function copyEmbedInTab() {
@@ -998,23 +1030,56 @@
 				</div>
 
 				{#if sourceType === 'url'}
-					<form onsubmit={(e) => { e.preventDefault(); handleAddSource(); }} class="space-y-2">
-						<textarea
-							bind:value={sourceUrlText}
-							rows="3"
-							placeholder="https://example.com/page-1"
-							class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm text-text font-mono placeholder:text-text-muted focus:outline-none focus:border-accent resize-y"
-						></textarea>
+					<form onsubmit={(e) => { e.preventDefault(); crawlEnabled ? handleCrawl() : handleAddSource(); }} class="space-y-2">
+						{#if crawlEnabled}
+							<input
+								bind:value={sourceUrlText}
+								placeholder="https://example.com"
+								class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm text-text font-mono placeholder:text-text-muted focus:outline-none focus:border-accent"
+							/>
+						{:else}
+							<textarea
+								bind:value={sourceUrlText}
+								rows="3"
+								placeholder="https://example.com/page-1"
+								class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm text-text font-mono placeholder:text-text-muted focus:outline-none focus:border-accent resize-y"
+							></textarea>
+						{/if}
+						<label class="flex items-center gap-2" title={parsedUrls.length > 1 ? 'Crawl works with a single root URL' : ''}>
+							<input type="checkbox" bind:checked={crawlEnabled} disabled={parsedUrls.length > 1} class="accent-accent" />
+							<span class="text-sm {parsedUrls.length > 1 ? 'text-text-muted/50' : 'text-text-muted'}">Crawl site — follow links and ingest all pages</span>
+							{#if parsedUrls.length > 1}
+								<span class="text-[10px] text-text-muted/50">single URL only</span>
+							{/if}
+						</label>
+						{#if crawlEnabled}
+							<div class="grid grid-cols-2 gap-2">
+								<label class="block">
+									<span class="text-xs text-text-muted">Max pages</span>
+									<input type="number" bind:value={crawlMaxPages} min="1" max="200" class="mt-1 w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm text-text focus:outline-none focus:border-accent" />
+								</label>
+								<label class="block">
+									<span class="text-xs text-text-muted">Max depth</span>
+									<input type="number" bind:value={crawlMaxDepth} min="1" max="5" class="mt-1 w-full rounded-lg bg-surface border border-border px-3 py-2 text-sm text-text focus:outline-none focus:border-accent" />
+								</label>
+							</div>
+						{/if}
 						<div class="flex items-center justify-between">
 							<span class="text-xs text-text-muted">
-								{#if parsedUrls.length > 0}
+								{#if crawlEnabled}
+									Crawl from a single root URL
+								{:else if parsedUrls.length > 0}
 									{parsedUrls.length} URL{parsedUrls.length !== 1 ? 's' : ''} ready
 								{:else}
 									One URL per line
 								{/if}
 							</span>
-							<button type="submit" disabled={addingSource || parsedUrls.length === 0} class="rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-40">
-								{addingSource ? 'Adding...' : parsedUrls.length > 1 ? `Add ${parsedUrls.length} URLs` : 'Add'}
+							<button type="submit" disabled={(crawlEnabled ? crawling : addingSource) || parsedUrls.length === 0} class="rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent/90 disabled:opacity-40">
+								{#if crawlEnabled}
+									{crawling ? 'Starting crawl...' : 'Crawl'}
+								{:else}
+									{addingSource ? 'Adding...' : parsedUrls.length > 1 ? `Add ${parsedUrls.length} URLs` : 'Add'}
+								{/if}
 							</button>
 						</div>
 					</form>
@@ -1048,8 +1113,8 @@
 					<button onclick={handlePurge} class="text-xs text-error hover:underline">Purge All</button>
 				</div>
 				<div class="space-y-2">
-					{#each sources as source}
-						<div class="bg-surface-alt border border-border rounded-lg px-4 py-3 flex items-center justify-between">
+					{#each sources as source (source.source_identifier)}
+						<div transition:slide={{ duration: 300 }} class="bg-surface-alt border border-border rounded-lg px-4 py-3 flex items-center justify-between">
 							<div class="min-w-0 flex-1">
 								<div class="text-sm font-medium truncate">{source.source_identifier}</div>
 								<div class="text-xs text-text-muted mt-1">
