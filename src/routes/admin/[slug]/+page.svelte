@@ -263,6 +263,8 @@
 				generation_model: model.generation_model,
 				reranker_enabled: model.reranker_enabled,
 				rerank_model: model.rerank_model,
+				rerank_candidates: model.rerank_candidates,
+				rerank_threshold: model.rerank_threshold,
 				keyword_search_enabled: model.keyword_search_enabled,
 				allowed_origins: model.allowed_origins,
 				hosted_chat: model.hosted_chat,
@@ -633,17 +635,21 @@
 
 	<!-- Settings Tab -->
 	{#if activeTab === 'settings'}
-		<form onsubmit={(e) => { e.preventDefault(); handleSave(); }} class="space-y-4 max-w-2xl">
-			<fieldset class="space-y-4">
-				<legend class="text-sm font-medium text-text-muted mb-2">General</legend>
-				<label class="block">
-					<span class="text-sm text-text-muted">Name</span>
-					<input bind:value={model.name} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
-				</label>
-				<label class="block">
-					<span class="text-sm text-text-muted">Description</span>
-					<textarea bind:value={model.description} rows="2" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent resize-none"></textarea>
-				</label>
+		<form onsubmit={(e) => { e.preventDefault(); handleSave(); }} class="space-y-6 max-w-2xl">
+
+			<!-- Behavior -->
+			<section class="rounded-xl border border-border bg-surface-alt/30 p-5 space-y-4">
+				<h3 class="text-sm font-semibold text-text uppercase tracking-wider">Behavior</h3>
+				<div class="grid grid-cols-2 gap-4">
+					<label class="block">
+						<span class="text-sm text-text-muted">Name</span>
+						<input bind:value={model.name} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+					</label>
+					<label class="block">
+						<span class="text-sm text-text-muted">Description</span>
+						<input bind:value={model.description} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+					</label>
+				</div>
 				<div class="block">
 					<div class="flex items-center justify-between">
 						<span class="text-sm text-text-muted">System Prompt</span>
@@ -734,140 +740,191 @@
 						</div>
 					{/if}
 				</div>
-			</fieldset>
+			</section>
 
-			<fieldset class="space-y-4">
-				<legend class="text-sm font-medium text-text-muted mb-2">RAG Config</legend>
-				<div class="grid grid-cols-2 gap-4">
-					<label class="block">
-						<span class="text-sm text-text-muted">Chunk Size</span>
-						<input type="number" bind:value={model.chunk_size} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
-					</label>
-					<label class="block">
-						<span class="text-sm text-text-muted">Chunk Overlap</span>
-						<input type="number" bind:value={model.chunk_overlap} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
-					</label>
-					<label class="block">
-						<span class="text-sm text-text-muted">Similarity Threshold</span>
-						<input type="number" step="0.01" bind:value={model.similarity_threshold} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
-					</label>
-					<label class="block">
-						<span class="text-sm text-text-muted">Top K</span>
-						<input type="number" bind:value={model.top_k} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+			<!-- Retrieval & Generation -->
+			<section class="rounded-xl border border-border bg-surface-alt/30 p-5 space-y-5">
+				<h3 class="text-sm font-semibold text-text uppercase tracking-wider">Retrieval & Generation</h3>
+
+				<!-- Chunking -->
+				<div class="space-y-3">
+					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Chunking</h4>
+					<div class="grid grid-cols-2 gap-4">
+						<label class="block">
+							<span class="text-sm text-text-muted">Chunk Size</span>
+							<input type="number" bind:value={model.chunk_size} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+						</label>
+						<label class="block">
+							<span class="text-sm text-text-muted">Chunk Overlap</span>
+							<input type="number" bind:value={model.chunk_overlap} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+						</label>
+					</div>
+				</div>
+
+				<!-- Search -->
+				<div class="space-y-3">
+					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Search</h4>
+					<div class="grid grid-cols-2 gap-4">
+						<label class="block">
+							<span class="text-sm text-text-muted">Similarity Threshold</span>
+							<input type="number" step="0.01" bind:value={model.similarity_threshold} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+						</label>
+						<label class="block">
+							<span class="text-sm text-text-muted">Top K</span>
+							<input type="number" bind:value={model.top_k} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+						</label>
+						<label class="block">
+							<span class="text-sm text-text-muted">Embedding Model</span>
+							<input bind:value={model.embedding_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
+						</label>
+					</div>
+					<label class="flex items-center gap-2">
+						<input type="checkbox" bind:checked={model.keyword_search_enabled} class="accent-accent" />
+						<span class="text-sm text-text-muted">Keyword Search (tsquery)</span>
 					</label>
 				</div>
-			</fieldset>
 
-			<fieldset class="space-y-4">
-				<legend class="text-sm font-medium text-text-muted mb-2">Models</legend>
-				<label class="block">
-					<span class="text-sm text-text-muted">Embedding Model</span>
-					<input bind:value={model.embedding_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
-				</label>
-				<label class="block">
-					<span class="text-sm text-text-muted">Generation Model</span>
-					<input bind:value={model.generation_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
-				</label>
-				<label class="flex items-center gap-2">
-					<input type="checkbox" bind:checked={model.keyword_search_enabled} class="accent-accent" />
-					<span class="text-sm text-text-muted">Keyword Search (tsquery)</span>
-				</label>
-				<label class="flex items-center gap-2">
-					<input type="checkbox" bind:checked={model.reranker_enabled} class="accent-accent" />
-					<span class="text-sm text-text-muted">Reranker Enabled</span>
-				</label>
-				{#if model.reranker_enabled}
-					<label class="block">
-						<span class="text-sm text-text-muted">Rerank Model</span>
-						<input bind:value={model.rerank_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
+				<!-- Reranking -->
+				<div class="space-y-3">
+					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Reranking</h4>
+					<label class="flex items-center gap-2">
+						<input type="checkbox" bind:checked={model.reranker_enabled} class="accent-accent" />
+						<span class="text-sm text-text-muted">Enable Reranker</span>
 					</label>
-				{/if}
-			</fieldset>
-
-			<fieldset class="space-y-4">
-				<legend class="text-sm font-medium text-text-muted mb-2">API Keys</legend>
-				<label class="block">
-					<span class="flex items-center gap-2">
-						<span class="text-sm text-text-muted">Anthropic API Key</span>
-						{#if model.has_custom_anthropic_key}
-							<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">configured</span>
-						{/if}
-					</span>
-					<input
-						type="password"
-						bind:value={anthropicKeyInput}
-						placeholder={model.has_custom_anthropic_key ? 'Enter new key to replace' : 'sk-ant-...'}
-						autocomplete="off"
-						class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
-					/>
-				</label>
-				<label class="block">
-					<span class="flex items-center gap-2">
-						<span class="text-sm text-text-muted">Voyage API Key</span>
-						{#if model.has_custom_voyage_key}
-							<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">configured</span>
-						{/if}
-					</span>
-					<input
-						type="password"
-						bind:value={voyageKeyInput}
-						placeholder={model.has_custom_voyage_key ? 'Enter new key to replace' : 'pa-...'}
-						autocomplete="off"
-						class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
-					/>
-				</label>
-				<div class="flex items-center gap-4 text-xs text-text-muted">
-					<span>Keys are encrypted at rest. Leave blank to keep current key. Budget is hard capped at $10 unless custom keys are provided.</span>
-					<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline whitespace-nowrap">Get Anthropic key &nearr;</a>
-					<a href="https://dash.voyageai.com/api-keys" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline whitespace-nowrap">Get Voyage key &nearr;</a>
+					{#if model.reranker_enabled}
+						<div class="grid grid-cols-3 gap-4">
+							<label class="block">
+								<span class="text-sm text-text-muted">Rerank Model</span>
+								<input bind:value={model.rerank_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
+							</label>
+							<label class="block">
+								<span class="text-sm text-text-muted">Candidates</span>
+								<input type="number" bind:value={model.rerank_candidates} min="1" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
+							</label>
+							<label class="block">
+								<span class="inline-flex items-center gap-1">
+									<span class="text-sm text-text-muted">Min Score</span>
+									<span
+										class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help"
+										title="Minimum rerank score (0-1) to keep a chunk. Chunks scoring below this are dropped before reaching the LLM. Set to 0 to disable."
+									>?</span>
+								</span>
+								<input type="number" step="0.01" min="0" max="1" bind:value={model.rerank_threshold} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
+							</label>
+						</div>
+					{/if}
 				</div>
-			</fieldset>
 
-			<fieldset class="space-y-4">
-				<legend class="text-sm font-medium text-text-muted mb-2">Access</legend>
-				<div>
-					<span class="text-sm text-text-muted">Allowed Origins</span>
-					<div class="mt-1 flex flex-wrap gap-2">
-						{#each model.allowed_origins as origin}
-							<span class="inline-flex items-center gap-1 bg-surface-alt border border-border rounded-lg px-3 py-1 text-sm font-mono">
-								{origin}
-								<button type="button" onclick={() => removeOrigin(origin)} class="text-text-muted hover:text-error ml-1">&times;</button>
+				<!-- Generation -->
+				<div class="space-y-3">
+					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Generation</h4>
+					<div class="grid grid-cols-2 gap-4">
+						<label class="block">
+							<span class="text-sm text-text-muted">Generation Model</span>
+							<input bind:value={model.generation_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
+						</label>
+						<div>
+							<div class="flex items-center gap-2">
+								<span class="text-sm text-text-muted">History Turns</span>
+								<span
+									class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help"
+									title="Number of previous conversation turns sent to the generator. Increases conversational quality but results in higher generation costs."
+								>?</span>
+							</div>
+							<input type="number" min="0" bind:value={model.history_turns} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Access & Billing -->
+			<section class="rounded-xl border border-border bg-surface-alt/30 p-5 space-y-5">
+				<h3 class="text-sm font-semibold text-text uppercase tracking-wider">Access & Billing</h3>
+
+				<!-- API Keys -->
+				<div class="space-y-3">
+					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">API Keys</h4>
+					<div class="grid grid-cols-2 gap-4">
+						<label class="block">
+							<span class="flex items-center gap-2">
+								<span class="text-sm text-text-muted">Anthropic API Key</span>
+								{#if model.has_custom_anthropic_key}
+									<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">configured</span>
+								{/if}
 							</span>
-						{/each}
+							<input
+								type="password"
+								bind:value={anthropicKeyInput}
+								placeholder={model.has_custom_anthropic_key ? 'Enter new key to replace' : 'sk-ant-...'}
+								autocomplete="off"
+								class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
+							/>
+						</label>
+						<label class="block">
+							<span class="flex items-center gap-2">
+								<span class="text-sm text-text-muted">Voyage API Key</span>
+								{#if model.has_custom_voyage_key}
+									<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">configured</span>
+								{/if}
+							</span>
+							<input
+								type="password"
+								bind:value={voyageKeyInput}
+								placeholder={model.has_custom_voyage_key ? 'Enter new key to replace' : 'pa-...'}
+								autocomplete="off"
+								class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
+							/>
+						</label>
 					</div>
-					<div class="mt-2 flex gap-2">
-						<input
-							bind:value={newOrigin}
-							placeholder="https://example.com"
-							onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOrigin(); } }}
-							class="flex-1 rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
-						/>
-						<button type="button" onclick={addOrigin} class="rounded-lg bg-surface-alt border border-border px-3 py-2 text-sm text-text-muted hover:text-text hover:border-accent">+</button>
+					<div class="flex items-center gap-4 text-xs text-text-muted">
+						<span>Encrypted at rest. Leave blank to keep current key.</span>
+						<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline whitespace-nowrap">Anthropic &nearr;</a>
+						<a href="https://dash.voyageai.com/api-keys" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline whitespace-nowrap">Voyage &nearr;</a>
 					</div>
 				</div>
-				<label class="flex items-center gap-2">
-					<input type="checkbox" bind:checked={model.hosted_chat} class="accent-accent" />
-					<span class="text-sm text-text-muted">Hosted Chat (expose at <a href="/chat/{model.slug}" target="_blank" class="text-accent hover:underline">/chat/{model.slug}</a>)</span>
-				</label>
-				<div>
-					<div class="flex items-center gap-2">
-						<span class="text-sm text-text-muted">History Turns</span>
-						<span
-							class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help"
-							title="Number of previous conversation turns sent to the generator. Increases conversational quality but results in higher generation costs."
-						>?</span>
-					</div>
-					<input type="number" min="0" bind:value={model.history_turns} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+
+				<!-- Budget -->
+				<div class="space-y-3">
+					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Budget</h4>
+					<label class="block max-w-xs">
+						<span class="text-sm text-text-muted">Budget Limit ($)</span>
+						<input type="number" step="0.01" bind:value={model.budget_limit} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+					</label>
+					<p class="text-xs text-text-muted">Hard capped at $10 unless custom API keys are provided.</p>
 				</div>
-				<label class="block">
-					<span class="text-sm text-text-muted">Budget Limit ($)</span>
-					<input type="number" step="0.01" bind:value={model.budget_limit} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
-				</label>
-				<label class="flex items-center gap-2">
-					<input type="checkbox" bind:checked={model.is_active} class="accent-accent" />
-					<span class="text-sm text-text-muted">Active</span>
-				</label>
-			</fieldset>
+
+				<!-- Access -->
+				<div class="space-y-3">
+					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Origins & Access</h4>
+					<div>
+						<div class="flex flex-wrap gap-2">
+							{#each model.allowed_origins as origin}
+								<span class="inline-flex items-center gap-1 bg-surface-alt border border-border rounded-lg px-3 py-1 text-sm font-mono">
+									{origin}
+									<button type="button" onclick={() => removeOrigin(origin)} class="text-text-muted hover:text-error ml-1">&times;</button>
+								</span>
+							{/each}
+						</div>
+						<div class="mt-2 flex gap-2">
+							<input
+								bind:value={newOrigin}
+								placeholder="https://example.com"
+								onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOrigin(); } }}
+								class="flex-1 rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
+							/>
+							<button type="button" onclick={addOrigin} class="rounded-lg bg-surface-alt border border-border px-3 py-2 text-sm text-text-muted hover:text-text hover:border-accent">+</button>
+						</div>
+					</div>
+					<label class="flex items-center gap-2">
+						<input type="checkbox" bind:checked={model.hosted_chat} class="accent-accent" />
+						<span class="text-sm text-text-muted">Hosted Chat (expose at <a href="/chat/{model.slug}" target="_blank" class="text-accent hover:underline">/chat/{model.slug}</a>)</span>
+					</label>
+					<label class="flex items-center gap-2">
+						<input type="checkbox" bind:checked={model.is_active} class="accent-accent" />
+						<span class="text-sm text-text-muted">Active</span>
+					</label>
+				</div>
+			</section>
 
 			<button
 				type="submit"
@@ -1211,30 +1268,30 @@
 			<div class="text-sm text-text-muted mb-4">{conversationsTotal} total conversation(s)</div>
 			<div class="space-y-3">
 				{#each conversations as conv}
-					<button
-						type="button"
-						class="w-full text-left bg-surface-alt border border-border rounded-lg p-4 hover:border-accent/50 transition-colors cursor-pointer"
-						onclick={() => toggleConversation(conv.id)}
-					>
-						<span class="flex items-center justify-between">
-							<span class="flex items-center gap-2">
+					<div class="bg-surface-alt border border-border rounded-lg p-4 hover:border-accent/50 transition-colors">
+						<div
+							class="flex items-center justify-between cursor-pointer"
+							role="button"
+							tabindex="0"
+							onclick={() => toggleConversation(conv.id)}
+							onkeydown={(e) => { if (e.key === 'Enter') toggleConversation(conv.id); }}
+						>
+							<div class="flex items-center gap-2">
 								<span class="text-sm font-medium">{conv.title || 'Untitled'}</span>
 								<span class="text-xs px-2 py-0.5 rounded bg-surface border border-border text-text-muted">{conv.message_count} msg{conv.message_count !== 1 ? 's' : ''}</span>
-							</span>
-							<span class="flex items-center gap-3">
+							</div>
+							<div class="flex items-center gap-3">
 								<span class="text-xs text-text-muted font-mono">{conv.session_id.slice(0, 8)}...</span>
 								<span class="text-xs text-text-muted">{new Date(conv.updated_at).toLocaleString()}</span>
-								<span
-									role="button"
-									tabindex="0"
+								<button
+									type="button"
 									onclick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id); }}
-									onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleDeleteConversation(conv.id); } }}
-									class="text-xs text-text-muted hover:text-error cursor-pointer"
-								>Delete</span>
+									class="text-xs text-text-muted hover:text-error"
+								>Delete</button>
 								<span class="text-xs text-text-muted">{expandedConversationId === conv.id ? '▲' : '▼'}</span>
-							</span>
-						</span>
-					</button>
+							</div>
+						</div>
+					</div>
 					{#if expandedConversationId === conv.id}
 						<div class="ml-4 space-y-2">
 							{#if loadingMessages}
@@ -1243,13 +1300,15 @@
 								<div class="text-text-muted text-sm">No messages in this conversation.</div>
 							{:else}
 								{#each conversationMessages as msg}
-									<button
-										type="button"
-										class="w-full text-left bg-surface border border-border rounded-lg p-3 space-y-2 hover:border-accent/50 transition-colors cursor-pointer"
-										onclick={() => toggleMessageChunks(msg)}
-									>
-										<span class="flex items-center justify-between">
-											<span class="flex items-center gap-2">
+									<div class="bg-surface border border-border rounded-lg p-3 space-y-2 hover:border-accent/50 transition-colors">
+										<div
+											class="flex items-center justify-between cursor-pointer"
+											role="button"
+											tabindex="0"
+											onclick={() => toggleMessageChunks(msg)}
+											onkeydown={(e) => { if (e.key === 'Enter') toggleMessageChunks(msg); }}
+										>
+											<div class="flex items-center gap-2">
 												<span class="text-xs px-2 py-0.5 rounded {msg.status === 'answered'
 													? 'bg-green-500/20 text-green-400'
 													: msg.status === 'off_topic'
@@ -1258,27 +1317,25 @@
 												{#if msg.retrieved_chunks?.length}
 													<span class="text-[10px] text-text-muted">{msg.retrieved_chunks.length} chunks</span>
 												{/if}
-											</span>
-											<span class="flex items-center gap-2">
+											</div>
+											<div class="flex items-center gap-2">
 												<span class="text-xs text-text-muted">{new Date(msg.created_at).toLocaleString()}</span>
-												<span
-													role="button"
-													tabindex="0"
+												<button
+													type="button"
 													onclick={(e) => { e.stopPropagation(); handleDeleteMessage(conv.id, msg.id); }}
-													onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); handleDeleteMessage(conv.id, msg.id); } }}
-													class="text-xs text-text-muted hover:text-error cursor-pointer"
-												>Delete</span>
+													class="text-xs text-text-muted hover:text-error"
+												>Delete</button>
 												<span class="text-xs text-text-muted">{expandedMsgId === msg.id ? '▲' : '▼'}</span>
-											</span>
-										</span>
-										<span class="block">
-											<span class="block text-sm font-medium">Q: {msg.question}</span>
-											<span class="block text-sm text-text-muted mt-1">A: {msg.answer}</span>
-										</span>
-										<span class="block text-xs text-text-muted">
+											</div>
+										</div>
+										<div class="select-text">
+											<div class="text-sm font-medium">Q: {msg.question}</div>
+											<div class="text-sm text-text-muted mt-1">A: {msg.answer}</div>
+										</div>
+										<div class="text-xs text-text-muted">
 											Tokens: {msg.tokens_in} in / {msg.tokens_out} out
-										</span>
-									</button>
+										</div>
+									</div>
 									{#if expandedMsgId === msg.id}
 										<div class="ml-4 space-y-2">
 											{#if loadingMsgChunks}

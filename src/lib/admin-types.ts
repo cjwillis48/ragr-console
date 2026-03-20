@@ -26,6 +26,8 @@ export interface RagModel {
 	generation_model: string;
 	reranker_enabled: boolean;
 	rerank_model: string;
+	rerank_candidates: number;
+	rerank_threshold: number;
 	keyword_search_enabled: boolean;
 	allowed_origins: string[];
 	hosted_chat: boolean;
@@ -51,6 +53,8 @@ export interface RagModelCreate {
 	generation_model?: string | null;
 	reranker_enabled?: boolean | null;
 	rerank_model?: string | null;
+	rerank_candidates?: number | null;
+	rerank_threshold?: number | null;
 	keyword_search_enabled?: boolean | null;
 	allowed_origins?: string[] | null;
 	hosted_chat?: boolean | null;
@@ -70,6 +74,8 @@ export interface RagModelUpdate {
 	generation_model?: string | null;
 	reranker_enabled?: boolean | null;
 	rerank_model?: string | null;
+	rerank_candidates?: number | null;
+	rerank_threshold?: number | null;
 	keyword_search_enabled?: boolean | null;
 	allowed_origins?: string[] | null;
 	hosted_chat?: boolean | null;
