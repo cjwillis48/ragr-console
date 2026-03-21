@@ -1201,7 +1201,7 @@
 							fontFamily={theme.font_family}
 							borderRadius={theme.border_radius}
 							sampleQuestions={model.sample_questions}
-							showSampleQuestionsInGreeting={theme.show_sample_questions_in_greeting ?? true}
+							showSampleQuestionsInGreeting={theme.show_sample_questions_in_greeting === true}
 						/>
 					</div>
 				</div>
