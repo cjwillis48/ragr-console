@@ -8,6 +8,7 @@
 		status,
 		isStreaming = false,
 		modelName,
+		suggestions = [],
 		onsuggestion
 	}: {
 		role: 'user' | 'assistant';
@@ -15,6 +16,7 @@
 		status?: string;
 		isStreaming?: boolean;
 		modelName?: string;
+		suggestions?: string[];
 		onsuggestion?: (text: string) => void;
 	} = $props();
 
@@ -62,10 +64,6 @@
 		return 'text-slate-700 dark:text-slate-300';
 	}
 
-	function getSuggestions(s: string | undefined): string[] {
-		if (s === 'off_topic') return ['What can you help me with?', 'Tell me about yourself.'];
-		return [];
-	}
 </script>
 
 <div class="flex {role === 'user' ? 'justify-end' : 'justify-start'} mb-3">
@@ -74,43 +72,45 @@
 			{content}
 		</p>
 	{:else}
-		<div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm {isNonAnswered(status) ? getContainerClass(status) : getContainerClass(undefined)}">
-			{#if isNonAnswered(status)}
-				<div class="mb-2 flex items-start gap-2">
-					<span
-						class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {getBadgeClass(status)}"
-						title={getStatusDescription(status)}
-					>
-						<svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" aria-hidden="true">
-							<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" />
-							<path d="M8 7.1v3.3M8 5.2h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-						</svg>
-						{getStatusLabel(status)}
-					</span>
-				</div>
-				<p class="mb-2 text-[11px] leading-snug {getDescriptionClass(status)}">
-					{getStatusDescription(status)}
-				</p>
-				{#if getSuggestions(status).length > 0 && onsuggestion}
-					<div class="mb-2 flex flex-wrap gap-1.5">
-						{#each getSuggestions(status) as suggestion}
-							<button
-								type="button"
-								class="rounded-full border border-slate-300/80 bg-white/80 px-2 py-1 text-[11px] leading-tight text-slate-700 hover:bg-white dark:border-slate-500/60 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
-								onclick={() => onsuggestion?.(suggestion)}
-							>
-								{suggestion}
-							</button>
-						{/each}
+		<div class="max-w-[85%]">
+			<div class="rounded-2xl px-3 py-2 text-sm {isNonAnswered(status) ? getContainerClass(status) : getContainerClass(undefined)}">
+				{#if isNonAnswered(status)}
+					<div class="mb-2 flex items-start gap-2">
+						<span
+							class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {getBadgeClass(status)}"
+							title={getStatusDescription(status)}
+						>
+							<svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" aria-hidden="true">
+								<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" />
+								<path d="M8 7.1v3.3M8 5.2h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+							</svg>
+							{getStatusLabel(status)}
+						</span>
 					</div>
+					<p class="mb-2 text-[11px] leading-snug {getDescriptionClass(status)}">
+						{getStatusDescription(status)}
+					</p>
 				{/if}
-			{/if}
-			{#if content}
-				<div class="chat-markdown break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
-					{@html renderMarkdown(content)}
+				{#if content}
+					<div class="chat-markdown break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
+						{@html renderMarkdown(content)}
+					</div>
+				{:else if isStreaming}
+					<span class="text-slate-500 dark:text-slate-400">Thinking...</span>
+				{/if}
+			</div>
+			{#if suggestions.length > 0 && onsuggestion}
+				<div class="mt-2 flex flex-wrap gap-1.5">
+					{#each suggestions as suggestion}
+						<button
+							type="button"
+							class="rounded-full border border-slate-300/80 bg-white/80 px-2.5 py-1 text-[11px] leading-tight text-slate-700 hover:bg-white dark:border-slate-500/60 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+							onclick={() => onsuggestion?.(suggestion)}
+						>
+							{suggestion}
+						</button>
+					{/each}
 				</div>
-			{:else if isStreaming}
-				<span class="text-slate-500 dark:text-slate-400">Thinking...</span>
 			{/if}
 		</div>
 	{/if}

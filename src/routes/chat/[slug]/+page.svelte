@@ -21,6 +21,7 @@
 	const slug = $derived(page.params.slug!);
 
 	let canSend = $derived(!isStreaming && pageStatus === 'ready' && modelInfo?.accepting_requests);
+	let sampleQuestions = $derived(modelInfo?.sample_questions ?? []);
 
 	async function scrollToBottom() {
 		await tick();
@@ -115,6 +116,20 @@
 	function handleSuggestion(text: string) {
 		if (!isStreaming) handleSend(text);
 	}
+
+	function getSuggestionsForMessage(msg: Message, index: number): string[] {
+		if (sampleQuestions.length === 0) return [];
+		// Show on greeting (first message, no user messages yet)
+		if (index === messages.length - 1 && msg.role === 'assistant' && msg.status === 'answered' && messages.every(m => m.role === 'assistant')) {
+			return sampleQuestions;
+		}
+		// Show on first off_topic only
+		if (msg.status === 'off_topic' && !msg.isStreaming) {
+			const isFirstOffTopic = messages.findIndex(m => m.status === 'off_topic') === index;
+			if (isFirstOffTopic) return sampleQuestions;
+		}
+		return [];
+	}
 </script>
 
 <svelte:head>
@@ -151,13 +166,14 @@
 		<!-- Messages -->
 		<div bind:this={messagesContainer} class="flex-1 min-h-0 overflow-y-auto px-4 py-3 bg-white dark:bg-slate-900">
 			<div class="max-w-3xl mx-auto space-y-3">
-				{#each messages as msg (msg.id)}
+				{#each messages as msg, i (msg.id)}
 					<ChatMessage
 						role={msg.role}
 						content={msg.content}
 						status={msg.status}
 						isStreaming={msg.isStreaming}
 						modelName={msg.role === 'assistant' ? modelInfo?.name : undefined}
+						suggestions={getSuggestionsForMessage(msg, i)}
 						onsuggestion={handleSuggestion}
 					/>
 				{/each}

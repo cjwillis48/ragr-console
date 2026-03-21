@@ -24,12 +24,14 @@
 		botBubbleColor?: string | null;
 		fontFamily?: string | null;
 		borderRadius?: number | null;
+		sampleQuestions?: string[];
 	}
 
 	let {
 		slug, name, description, label, greeting = '', placeholder = 'Ask a question...',
 		launcherHint, acceptingRequests = true, inline = false,
-		primaryColor, bgColor, textColor, userBubbleColor, botBubbleColor, fontFamily, borderRadius
+		primaryColor, bgColor, textColor, userBubbleColor, botBubbleColor, fontFamily, borderRadius,
+		sampleQuestions = []
 	}: Props = $props();
 
 	let subtitle = $derived(label?.trim() || '');
@@ -266,6 +268,26 @@
 		const html = marked.parse(text, { gfm: true, breaks: true });
 		return sanitizeHtml(typeof html === 'string' ? html : '');
 	}
+
+	function getSuggestionsForMessage(msg: Message, index: number): string[] {
+		if (sampleQuestions.length === 0) return [];
+		// Show on greeting (only assistant messages so far)
+		if (index === messages.length - 1 && msg.role === 'assistant' && msg.status === 'answered' && messages.every(m => m.role === 'assistant')) {
+			return sampleQuestions;
+		}
+		// Show on first off_topic only
+		if (msg.status === 'off_topic' && !msg.isStreaming) {
+			const isFirstOffTopic = messages.findIndex(m => m.status === 'off_topic') === index;
+			if (isFirstOffTopic) return sampleQuestions;
+		}
+		return [];
+	}
+
+	function handleSuggestion(text: string) {
+		if (isSending) return;
+		input = text;
+		sendMessage();
+	}
 </script>
 
 {#if inline}
@@ -293,30 +315,46 @@
 
 		<!-- Messages -->
 		<div bind:this={messagesContainer} class="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
-			{#each messages as msg (msg.id)}
+			{#each messages as msg, i (msg.id)}
 				<div class="flex {msg.role === 'user' ? 'justify-end' : 'justify-start'}">
 					{#if msg.role === 'user'}
 						<p class="max-w-[85%] px-3 py-2 text-sm whitespace-pre-wrap" style="background: {userBubble}; color: {text}; border-radius: {radius}px;">{msg.content}</p>
 					{:else}
-						<div class="max-w-[85%] px-3 py-2 text-sm" style="background: {botBubble}; border-radius: {radius}px;">
-							{#if isNonAnswered(msg.status)}
-								<div class="mb-2 flex items-start gap-2">
-									<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {getStatusBadgeClass(msg.status)}" title={getStatusDescription(msg.status)}>
-										<svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" aria-hidden="true">
-											<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" />
-											<path d="M8 7.1v3.3M8 5.2h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-										</svg>
-										{getStatusLabel(msg.status)}
-									</span>
+						<div class="max-w-[85%]">
+							<div class="px-3 py-2 text-sm" style="background: {botBubble}; border-radius: {radius}px;">
+								{#if isNonAnswered(msg.status)}
+									<div class="mb-2 flex items-start gap-2">
+										<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {getStatusBadgeClass(msg.status)}" title={getStatusDescription(msg.status)}>
+											<svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" aria-hidden="true">
+												<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" />
+												<path d="M8 7.1v3.3M8 5.2h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+											</svg>
+											{getStatusLabel(msg.status)}
+										</span>
+									</div>
+									<p class="mb-2 text-[11px] leading-snug {getStatusDescriptionClass(msg.status)}">{getStatusDescription(msg.status)}</p>
+								{/if}
+								{#if msg.content}
+									<div class="chat-markdown break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
+										{@html renderMarkdown(msg.content)}
+									</div>
+								{:else if msg.isStreaming}
+									<span style="opacity: 0.5;">Thinking...</span>
+								{/if}
+							</div>
+							{#if getSuggestionsForMessage(msg, i).length > 0}
+								<div class="mt-2 flex flex-wrap gap-1.5 justify-start">
+									{#each getSuggestionsForMessage(msg, i) as suggestion}
+										<button
+											type="button"
+											class="rounded-full px-2.5 py-1 text-[11px] leading-tight text-left transition-opacity hover:opacity-80"
+											style="background: color-mix(in srgb, {text} 12%, {bg}); color: {text}; border: 1px solid color-mix(in srgb, {text} 20%, transparent);"
+											onclick={() => handleSuggestion(suggestion)}
+										>
+											{suggestion}
+										</button>
+									{/each}
 								</div>
-								<p class="mb-2 text-[11px] leading-snug {getStatusDescriptionClass(msg.status)}">{getStatusDescription(msg.status)}</p>
-							{/if}
-							{#if msg.content}
-								<div class="chat-markdown break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
-									{@html renderMarkdown(msg.content)}
-								</div>
-							{:else if msg.isStreaming}
-								<span style="opacity: 0.5;">Thinking...</span>
 							{/if}
 						</div>
 					{/if}
@@ -395,30 +433,45 @@
 
 				<!-- Messages -->
 				<div bind:this={messagesContainer} class="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3 bg-white dark:bg-slate-900">
-					{#each messages as msg (msg.id)}
+					{#each messages as msg, i (msg.id)}
 						<div class="flex {msg.role === 'user' ? 'justify-end' : 'justify-start'}">
 							{#if msg.role === 'user'}
 								<p class="max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap bg-indigo-600 text-white">{msg.content}</p>
 							{:else}
-								<div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm {isNonAnswered(msg.status) ? getStatusContainerClass(msg.status) : getStatusContainerClass(undefined)}">
-									{#if isNonAnswered(msg.status)}
-										<div class="mb-2 flex items-start gap-2">
-											<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {getStatusBadgeClass(msg.status)}" title={getStatusDescription(msg.status)}>
-												<svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" aria-hidden="true">
-													<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" />
-													<path d="M8 7.1v3.3M8 5.2h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-												</svg>
-												{getStatusLabel(msg.status)}
-											</span>
+								<div class="max-w-[85%]">
+									<div class="rounded-2xl px-3 py-2 text-sm {isNonAnswered(msg.status) ? getStatusContainerClass(msg.status) : getStatusContainerClass(undefined)}">
+										{#if isNonAnswered(msg.status)}
+											<div class="mb-2 flex items-start gap-2">
+												<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {getStatusBadgeClass(msg.status)}" title={getStatusDescription(msg.status)}>
+													<svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" aria-hidden="true">
+														<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" />
+														<path d="M8 7.1v3.3M8 5.2h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+													</svg>
+													{getStatusLabel(msg.status)}
+												</span>
+											</div>
+											<p class="mb-2 text-[11px] leading-snug {getStatusDescriptionClass(msg.status)}">{getStatusDescription(msg.status)}</p>
+										{/if}
+										{#if msg.content}
+											<div class="chat-markdown break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
+												{@html renderMarkdown(msg.content)}
+											</div>
+										{:else if msg.isStreaming}
+											<span class="text-slate-500 dark:text-slate-400">Thinking...</span>
+										{/if}
+									</div>
+									{#if getSuggestionsForMessage(msg, i).length > 0}
+										<div class="mt-2 flex flex-wrap gap-1.5">
+											{#each getSuggestionsForMessage(msg, i) as suggestion}
+												<button
+													type="button"
+													class="rounded-full border border-slate-300/80 bg-white/80 px-2.5 py-1 text-[11px] leading-tight text-slate-700 hover:bg-white dark:border-slate-500/60 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800"
+													onclick={() => handleSuggestion(suggestion)}
+												>
+													{suggestion}
+												</button>
+											{/each}
 										</div>
-										<p class="mb-2 text-[11px] leading-snug {getStatusDescriptionClass(msg.status)}">{getStatusDescription(msg.status)}</p>
-									{/if}
-									{#if msg.content}
-										<div class="chat-markdown break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
-											{@html renderMarkdown(msg.content)}
-										</div>
-									{:else if msg.isStreaming}
-										<span class="text-slate-500 dark:text-slate-400">Thinking...</span>
 									{/if}
 								</div>
 							{/if}

@@ -227,6 +227,12 @@ export async function revokeApiKey(slug: string, keyId: number): Promise<void> {
 	await authedFetch(`/models/${slug}/api-keys/${keyId}`, { method: 'DELETE' });
 }
 
+// Sample Questions
+export async function generateSampleQuestions(slug: string): Promise<string[]> {
+	const res = await authedFetch(`/models/${slug}/generate-sample-questions`, { method: 'POST' });
+	return res.json();
+}
+
 // System Prompt
 export async function getSystemPromptHistory(slug: string): Promise<SystemPromptHistoryEntry[]> {
 	const res = await authedFetch(`/models/${slug}/system-prompt-history`);

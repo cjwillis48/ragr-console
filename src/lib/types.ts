@@ -4,6 +4,7 @@ export interface ModelInfo {
 	description: string;
 	allowed_origins: string[];
 	accepting_requests: boolean;
+	sample_questions: string[];
 }
 
 export interface WidgetTheme {

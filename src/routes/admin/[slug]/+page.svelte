@@ -1,13 +1,57 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { env } from '$env/dynamic/public';
-	import { onMount } from 'svelte';
-	import { slide } from 'svelte/transition';
-	import { getModel, updateModel, getTheme, updateTheme, getStats, getDailyStats, getTopSources, getConversations, getConversationMessages, deleteConversation, deleteMessage, getSources, getSourceChunks, getChunksByIds, createSource, deleteSource, deleteAllSources, uploadSources, crawlSite, listApiKeys, createApiKey, revokeApiKey, getSystemPromptHistory, rollbackSystemPrompt, streamGenerateSystemPrompt, acceptGeneratedPrompt } from '$lib/admin-api';
-	import type { RagModel, RagModelUpdate, WidgetTheme, StatsResponse, DailyStatsEntry, TopSourceEntry, ConversationSummaryResponse, MessageResponse, SourceResponse, CreateSourceRequest, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from '$lib/admin-types';
-	import { chunkRetrievalMethod, sortChunkRefs } from '$lib/admin-types';
+	import {page} from '$app/state';
+	import {env} from '$env/dynamic/public';
+	import {onMount} from 'svelte';
+	import {slide} from 'svelte/transition';
+	import {
+		acceptGeneratedPrompt,
+		crawlSite,
+		createApiKey,
+		createSource,
+		deleteAllSources,
+		deleteConversation,
+		deleteMessage,
+		deleteSource,
+		generateSampleQuestions,
+		getChunksByIds,
+		getConversationMessages,
+		getConversations,
+		getDailyStats,
+		getModel,
+		getSourceChunks,
+		getSources,
+		getStats,
+		getSystemPromptHistory,
+		getTheme,
+		getTopSources,
+		listApiKeys,
+		revokeApiKey,
+		rollbackSystemPrompt,
+		streamGenerateSystemPrompt,
+		updateModel,
+		updateTheme,
+		uploadSources
+	} from '$lib/admin-api';
+	import type {
+		ApiKeyCreateResponse,
+		ApiKeyRead,
+		ChunkDetail,
+		ChunkListResponse,
+		ConversationSummaryResponse,
+		CreateSourceRequest,
+		DailyStatsEntry,
+		MessageResponse,
+		RagModel,
+		RagModelUpdate,
+		SourceResponse,
+		StatsResponse,
+		SystemPromptHistoryEntry,
+		TopSourceEntry,
+		WidgetTheme
+	} from '$lib/admin-types';
+	import {chunkRetrievalMethod, sortChunkRefs} from '$lib/admin-types';
 	import ChatPanel from '$lib/components/ChatPanel.svelte';
-	import { addToast } from '$lib/toast.svelte';
+	import {addToast} from '$lib/toast.svelte';
 
 	const slug = $derived(page.params.slug!);
 
@@ -47,6 +91,8 @@
 	let showGeneratedPreview = $state(false);
 	let promptHistory = $state<SystemPromptHistoryEntry[]>([]);
 	let showPromptHistory = $state(false);
+	let generatingSampleQuestions = $state(false);
+	let newSampleQuestion = $state('');
 
 	// Source add form
 	let sourceType = $state<'url' | 'text' | 'upload'>('url');
@@ -247,6 +293,30 @@
 		}
 	}
 
+	async function handleGenerateSampleQuestions() {
+		if (!model) return;
+		generatingSampleQuestions = true;
+		try {
+			model.sample_questions = await generateSampleQuestions(slug);
+			addToast('Sample questions generated', 'success');
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Failed to generate questions', 'error');
+		} finally {
+			generatingSampleQuestions = false;
+		}
+	}
+
+	function addSampleQuestion() {
+		if (!model || !newSampleQuestion.trim()) return;
+		model.sample_questions = [...model.sample_questions, newSampleQuestion.trim()];
+		newSampleQuestion = '';
+	}
+
+	function removeSampleQuestion(index: number) {
+		if (!model) return;
+		model.sample_questions = model.sample_questions.filter((_, i) => i !== index);
+	}
+
 	async function handleSave() {
 		if (!model) return;
 		saving = true;
@@ -266,6 +336,7 @@
 				rerank_candidates: model.rerank_candidates,
 				rerank_threshold: model.rerank_threshold,
 				keyword_search_enabled: model.keyword_search_enabled,
+				sample_questions: model.sample_questions,
 				allowed_origins: model.allowed_origins,
 				hosted_chat: model.hosted_chat,
 				history_turns: model.history_turns,
@@ -740,6 +811,41 @@
 						</div>
 					{/if}
 				</div>
+
+				<!-- Sample Questions -->
+				<div class="block">
+					<div class="flex items-center justify-between">
+						<span class="text-sm text-text-muted">Sample Questions</span>
+						<button
+							type="button"
+							onclick={handleGenerateSampleQuestions}
+							disabled={generatingSampleQuestions}
+							class="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-40"
+						>
+							{generatingSampleQuestions ? 'Generating...' : '✨ Magic'}
+						</button>
+					</div>
+					<p class="text-xs text-text-muted mt-1">Shown on off-topic responses. Toggle "Show in greeting" in the Widget tab.</p>
+					{#if model.sample_questions.length > 0}
+						<div class="mt-2 flex flex-wrap gap-2">
+							{#each model.sample_questions as question, i}
+								<span class="inline-flex items-center gap-1 bg-surface-alt border border-border rounded-lg px-3 py-1.5 text-sm">
+									{question}
+									<button type="button" onclick={() => removeSampleQuestion(i)} class="text-text-muted hover:text-error ml-1">&times;</button>
+								</span>
+							{/each}
+						</div>
+					{/if}
+					<div class="mt-2 flex gap-2">
+						<input
+							bind:value={newSampleQuestion}
+							placeholder="Add a sample question..."
+							onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSampleQuestion(); } }}
+							class="flex-1 rounded-lg bg-surface-alt border border-border px-3 py-2 text-text text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
+						/>
+						<button type="button" onclick={addSampleQuestion} class="rounded-lg bg-surface-alt border border-border px-3 py-2 text-sm text-text-muted hover:text-text hover:border-accent">+</button>
+					</div>
+				</div>
 			</section>
 
 			<!-- Retrieval & Generation -->
@@ -751,11 +857,17 @@
 					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Chunking</h4>
 					<div class="grid grid-cols-2 gap-4">
 						<label class="block">
+							<span class="inline-flex items-center gap-1">
 							<span class="text-sm text-text-muted">Chunk Size</span>
+							<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Number of characters per text chunk when ingesting sources">?</span>
+						</span>
 							<input type="number" bind:value={model.chunk_size} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
 						</label>
 						<label class="block">
+							<span class="inline-flex items-center gap-1">
 							<span class="text-sm text-text-muted">Chunk Overlap</span>
+							<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Character overlap between adjacent chunks. Higher values improve context continuity but increase storage">?</span>
+						</span>
 							<input type="number" bind:value={model.chunk_overlap} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
 						</label>
 					</div>
@@ -766,11 +878,17 @@
 					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Search</h4>
 					<div class="grid grid-cols-2 gap-4">
 						<label class="block">
+							<span class="inline-flex items-center gap-1">
 							<span class="text-sm text-text-muted">Similarity Threshold</span>
+							<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Minimum cosine similarity (0-1) for a chunk to be considered relevant. Lower values return more results">?</span>
+						</span>
 							<input type="number" step="0.01" bind:value={model.similarity_threshold} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
 						</label>
 						<label class="block">
-							<span class="text-sm text-text-muted">Top K</span>
+							<span class="inline-flex items-center gap-1">
+								<span class="text-sm text-text-muted">Top K</span>
+								<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Maximum number of chunks retrieved per query">?</span>
+							</span>
 							<input type="number" bind:value={model.top_k} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
 						</label>
 						<label class="block">
@@ -780,7 +898,8 @@
 					</div>
 					<label class="flex items-center gap-2">
 						<input type="checkbox" bind:checked={model.keyword_search_enabled} class="accent-accent" />
-						<span class="text-sm text-text-muted">Keyword Search (tsquery)</span>
+						<span class="text-sm text-text-muted">Keyword Search</span>
+						<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Enables PostgreSQL full-text search alongside vector similarity. Improves recall for exact-match queries">?</span>
 					</label>
 				</div>
 
@@ -798,7 +917,10 @@
 								<input bind:value={model.rerank_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
 							</label>
 							<label class="block">
-								<span class="text-sm text-text-muted">Candidates</span>
+								<span class="inline-flex items-center gap-1">
+									<span class="text-sm text-text-muted">Candidates</span>
+									<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Number of chunks passed to the reranker before filtering down to Top K">?</span>
+								</span>
 								<input type="number" bind:value={model.rerank_candidates} min="1" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
 							</label>
 							<label class="block">
@@ -895,7 +1017,9 @@
 
 				<!-- Access -->
 				<div class="space-y-3">
-					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Origins & Access</h4>
+					<h4 class="inline-flex items-center gap-1 text-xs font-medium text-text-muted uppercase tracking-wide">Origins & Access
+						<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help normal-case tracking-normal" title="Domains allowed to embed or call this model's chat widget (CORS)">?</span>
+					</h4>
 					<div>
 						<div class="flex flex-wrap gap-2">
 							{#each model.allowed_origins as origin}
@@ -922,6 +1046,7 @@
 					<label class="flex items-center gap-2">
 						<input type="checkbox" bind:checked={model.is_active} class="accent-accent" />
 						<span class="text-sm text-text-muted">Active</span>
+						<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="When disabled, the chat widget and API return unavailable">?</span>
 					</label>
 				</div>
 			</section>
@@ -957,6 +1082,10 @@
 					<label class="block">
 						<span class="text-sm text-text-muted">Launcher Hint</span>
 						<input bind:value={theme.launcher_hint} placeholder="Text shown above the chat button" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
+					</label>
+					<label class="flex items-center gap-2">
+						<input type="checkbox" bind:checked={theme.show_sample_questions_in_greeting} class="accent-accent" />
+						<span class="text-sm text-text-muted">Show sample questions in greeting</span>
 					</label>
 				</fieldset>
 
@@ -1071,6 +1200,7 @@
 							botBubbleColor={theme.bot_bubble_color}
 							fontFamily={theme.font_family}
 							borderRadius={theme.border_radius}
+							sampleQuestions={model.sample_questions}
 						/>
 					</div>
 				</div>

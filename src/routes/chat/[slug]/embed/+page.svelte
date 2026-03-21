@@ -34,6 +34,7 @@
 	const LAUNCHER_HINT_MS = 6500;
 	let launcherHintTimeout: ReturnType<typeof setTimeout> | undefined;
 	let abortController: AbortController | null = null;
+	let sampleQuestions = $state<string[]>([]);
 	const slug = $derived(page.params.slug!);
 
 	function clamp(value: number, min: number, max: number): number {
@@ -87,6 +88,7 @@
 			]);
 			modelInfo = info;
 			theme = themeData;
+			sampleQuestions = info.sample_questions ?? [];
 			isChatAvailable = info.accepting_requests;
 			if (!isChatAvailable) return;
 
@@ -191,6 +193,18 @@
 		if (isSending) return;
 		input = text;
 		sendMessage();
+	}
+
+	function getSuggestionsForMessage(msg: Message, index: number): string[] {
+		if (sampleQuestions.length === 0) return [];
+		if (index === messages.length - 1 && msg.role === 'assistant' && msg.status === 'answered' && messages.every(m => m.role === 'assistant')) {
+			return sampleQuestions;
+		}
+		if (msg.status === 'off_topic' && !msg.isStreaming) {
+			const isFirstOffTopic = messages.findIndex(m => m.status === 'off_topic') === index;
+			if (isFirstOffTopic) return sampleQuestions;
+		}
+		return [];
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -316,30 +330,46 @@
 
 				<!-- Messages -->
 				<div bind:this={messagesContainer} class="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
-					{#each messages as msg (msg.id)}
+					{#each messages as msg, i (msg.id)}
 						<div class="flex {msg.role === 'user' ? 'justify-end' : 'justify-start'}">
 							{#if msg.role === 'user'}
 								<p class="max-w-[85%] px-3 py-2 text-sm whitespace-pre-wrap" style="background: {userBubble}; color: {txt}; border-radius: {radius}px;">{msg.content}</p>
 							{:else}
-								<div class="max-w-[85%] px-3 py-2 text-sm" style="background: {botBubble}; border-radius: {radius}px;">
-									{#if isNonAnswered(msg.status)}
-										<div class="mb-2 flex items-start gap-2">
-											<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {getStatusBadgeClass(msg.status)}" title={getStatusDescription(msg.status)}>
-												<svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" aria-hidden="true">
-													<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" />
-													<path d="M8 7.1v3.3M8 5.2h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-												</svg>
-												{getStatusLabel(msg.status)}
-											</span>
+								<div class="max-w-[85%]">
+									<div class="px-3 py-2 text-sm" style="background: {botBubble}; border-radius: {radius}px;">
+										{#if isNonAnswered(msg.status)}
+											<div class="mb-2 flex items-start gap-2">
+												<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {getStatusBadgeClass(msg.status)}" title={getStatusDescription(msg.status)}>
+													<svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" aria-hidden="true">
+														<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4" />
+														<path d="M8 7.1v3.3M8 5.2h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+													</svg>
+													{getStatusLabel(msg.status)}
+												</span>
+											</div>
+											<p class="mb-2 text-[11px] leading-snug {getStatusDescriptionClass(msg.status)}">{getStatusDescription(msg.status)}</p>
+										{/if}
+										{#if msg.content}
+											<div class="chat-markdown wrap-break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
+												{@html renderMarkdown(msg.content)}
+											</div>
+										{:else if msg.isStreaming}
+											<span style="opacity: 0.5;">Thinking...</span>
+										{/if}
+									</div>
+									{#if getSuggestionsForMessage(msg, i).length > 0}
+										<div class="mt-2 flex flex-wrap gap-1.5">
+											{#each getSuggestionsForMessage(msg, i) as suggestion}
+												<button
+													type="button"
+													class="rounded-full px-2.5 py-1 text-[11px] leading-tight text-left transition-opacity hover:opacity-80"
+													style="background: color-mix(in srgb, {txt} 12%, {bg}); color: {txt}; border: 1px solid color-mix(in srgb, {txt} 20%, transparent);"
+													onclick={() => handleSuggestion(suggestion)}
+												>
+													{suggestion}
+												</button>
+											{/each}
 										</div>
-										<p class="mb-2 text-[11px] leading-snug {getStatusDescriptionClass(msg.status)}">{getStatusDescription(msg.status)}</p>
-									{/if}
-									{#if msg.content}
-										<div class="chat-markdown wrap-break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_a]:underline [&_a]:break-all [&_code]:text-[0.95em] [&_pre]:overflow-x-auto [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5">
-											{@html renderMarkdown(msg.content)}
-										</div>
-									{:else if msg.isStreaming}
-										<span style="opacity: 0.5;">Thinking...</span>
 									{/if}
 								</div>
 							{/if}
