@@ -3,6 +3,7 @@
 	import { onMount, tick } from 'svelte';
 	import { fetchModelInfo, fetchTheme, streamChat } from '$lib/api';
 	import type { ModelInfo, WidgetTheme, Message } from '$lib/types';
+	import { getSuggestionsForMessage as _getSuggestions } from '$lib/chat-utils';
 	import ChatMessage from '$lib/components/ChatMessage.svelte';
 	import ChatInput from '$lib/components/ChatInput.svelte';
 
@@ -22,6 +23,7 @@
 
 	let canSend = $derived(!isStreaming && pageStatus === 'ready' && modelInfo?.accepting_requests);
 	let sampleQuestions = $derived(modelInfo?.sample_questions ?? []);
+	let showSampleQuestionsInGreeting = $derived(theme.show_sample_questions_in_greeting ?? true);
 
 	async function scrollToBottom() {
 		await tick();
@@ -118,17 +120,7 @@
 	}
 
 	function getSuggestionsForMessage(msg: Message, index: number): string[] {
-		if (sampleQuestions.length === 0) return [];
-		// Show on greeting (first message, no user messages yet)
-		if (index === messages.length - 1 && msg.role === 'assistant' && msg.status === 'answered' && messages.every(m => m.role === 'assistant')) {
-			return sampleQuestions;
-		}
-		// Show on first off_topic only
-		if (msg.status === 'off_topic' && !msg.isStreaming) {
-			const isFirstOffTopic = messages.findIndex(m => m.status === 'off_topic') === index;
-			if (isFirstOffTopic) return sampleQuestions;
-		}
-		return [];
+		return _getSuggestions(msg, index, messages, sampleQuestions, showSampleQuestionsInGreeting);
 	}
 </script>
 

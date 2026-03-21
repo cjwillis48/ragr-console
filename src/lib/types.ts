@@ -19,6 +19,7 @@ export interface WidgetTheme {
 	bot_bubble_color?: string | null;
 	font_family?: string | null;
 	border_radius?: number | null;
+	show_sample_questions_in_greeting?: boolean | null;
 }
 
 export interface Message {
