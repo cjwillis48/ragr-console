@@ -72,7 +72,7 @@
 			<div class="flex justify-center lg:justify-end">
 				<div class="w-full max-w-100 h-137.5 rounded-xl overflow-hidden border border-border shadow-2xl shadow-accent/5">
 					<iframe
-						src="http://localhost:5173/chat/ragr-landing-page/embed?expanded"
+						src="https://ragr.charliewillis.com/chat/ragr-landing-page/embed?expanded"
 						title="RAGr demo chat widget"
 						sandbox="allow-scripts allow-same-origin allow-forms"
 						class="w-full h-full border-none"
