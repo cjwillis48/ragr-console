@@ -7,6 +7,7 @@
 	import type { ModelInfo, WidgetTheme, Message } from '$lib/types';
 	import { isNonAnswered, getStatusLabel, getStatusDescription, getStatusBadgeClass, getStatusDescriptionClass, renderMarkdown, getSuggestionsForMessage as _getSuggestions } from '$lib/chat-utils';
 
+	const alwaysOpen = $derived(page.url.searchParams.has('expanded'));
 	let isOpen = $state(false);
 	let isChatAvailable = $state(false);
 	let modelInfo = $state<ModelInfo | null>(null);
@@ -100,8 +101,12 @@
 				}];
 			}
 
-			showLauncherHint = true;
-			launcherHintTimeout = setTimeout(() => { showLauncherHint = false; }, LAUNCHER_HINT_MS);
+			if (alwaysOpen) {
+				isOpen = true;
+			} else {
+				showLauncherHint = true;
+				launcherHintTimeout = setTimeout(() => { showLauncherHint = false; }, LAUNCHER_HINT_MS);
+			}
 		} catch {
 			isChatAvailable = false;
 		}
@@ -235,17 +240,18 @@
 
 {#if isChatAvailable}
 	<div
-		in:fly={{ x: 96, duration: 320, opacity: 0 }}
-		class="fixed right-4 bottom-4 z-40"
+		in:fly={{ x: alwaysOpen ? 0 : 96, duration: alwaysOpen ? 0 : 320, opacity: alwaysOpen ? 1 : 0 }}
+		class="{alwaysOpen ? 'w-full h-dvh' : 'fixed right-4 bottom-4 z-40'}"
 		style="font-family: {font};"
 	>
 		{#if isOpen}
 			<section
-				class="relative flex flex-col shadow-2xl overflow-hidden"
-				style="width: {panelWidth}px; height: {panelHeight}px; max-width: calc(100vw - 2rem); max-height: 70vh; background: {bg}; color: {txt}; border-radius: {radius}px; border: 1px solid {borderColor};"
+				class="relative flex flex-col {alwaysOpen ? 'w-full h-full' : 'shadow-2xl'} overflow-hidden"
+				style="{alwaysOpen ? '' : `width: ${panelWidth}px; height: ${panelHeight}px; max-width: calc(100vw - 2rem); max-height: 70vh;`} background: {bg}; color: {txt}; border-radius: {alwaysOpen ? 0 : radius}px; border: {alwaysOpen ? 'none' : `1px solid ${borderColor}`};"
 				aria-label="{modelInfo?.name ?? 'Chat'} assistant"
 			>
 				<!-- Resize handle -->
+				{#if !alwaysOpen}
 				<button
 					type="button"
 					class="hidden md:flex absolute top-0 left-0 h-8 w-8 items-center justify-center cursor-nwse-resize z-10 hover:opacity-100 transition-opacity"
@@ -257,6 +263,7 @@
 						<path d="M3 13L13 3M8 13L13 8M3 8L8 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
 					</svg>
 				</button>
+				{/if}
 
 				<!-- Header -->
 				<header class="px-4 py-3 flex items-center justify-between gap-2" style="border-bottom: 1px solid {borderColor};">
@@ -266,6 +273,7 @@
 							<p class="text-xs" style="opacity: 0.7;">{label}</p>
 						{/if}
 					</div>
+					{#if !alwaysOpen}
 					<button
 						class="text-sm px-2 py-1 rounded-md"
 						style="opacity: 0.7;"
@@ -274,6 +282,7 @@
 					>
 						Close
 					</button>
+				{/if}
 				</header>
 
 				<!-- Messages -->
