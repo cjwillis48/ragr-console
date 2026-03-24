@@ -31,7 +31,21 @@ async function authedFetch(path: string, options: RequestInit = {}): Promise<Res
 	}
 	if (!res.ok) {
 		const body = await res.text();
-		throw new Error(`${res.status}: ${body}`);
+		// Parse structured error responses (FastAPI validation errors)
+		let detail: string | undefined;
+		try {
+			const parsed = JSON.parse(body);
+			if (parsed.detail) {
+				detail = typeof parsed.detail === 'string'
+					? parsed.detail
+					: Array.isArray(parsed.detail)
+						? parsed.detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join('; ')
+						: JSON.stringify(parsed.detail);
+			}
+		} catch {
+			// body wasn't JSON, fall through to generic error
+		}
+		throw new Error(detail || `${res.status}: ${body}`);
 	}
 	return res;
 }
@@ -146,7 +160,27 @@ export async function deleteAllSources(slug: string): Promise<void> {
 	await authedFetch(`/models/${slug}/sources`, { method: 'DELETE' });
 }
 
+const MAX_UPLOAD_SIZE_MB = 50;
+const MAX_UPLOAD_FILES = 20;
+const ALLOWED_EXTENSIONS = ['.txt', '.md', '.html', '.htm', '.pdf'];
+
+function validateFiles(files: FileList): void {
+	if (files.length > MAX_UPLOAD_FILES) {
+		throw new Error(`Too many files: max ${MAX_UPLOAD_FILES} per upload`);
+	}
+	for (const file of files) {
+		const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] || '';
+		if (!ALLOWED_EXTENSIONS.includes(ext)) {
+			throw new Error(`Unsupported file type '${ext}' for "${file.name}". Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`);
+		}
+		if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
+			throw new Error(`"${file.name}" exceeds ${MAX_UPLOAD_SIZE_MB}MB limit (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+		}
+	}
+}
+
 export async function uploadSources(slug: string, files: FileList): Promise<CreateSourceResponse[]> {
+	validateFiles(files);
 	// Try presigned R2 upload first
 	try {
 		return await uploadViaPresign(slug, files);

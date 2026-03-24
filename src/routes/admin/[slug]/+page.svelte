@@ -358,11 +358,26 @@
 		}
 	}
 
+	function isValidUrl(url: string): boolean {
+		try {
+			const parsed = new URL(url);
+			return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+		} catch {
+			return false;
+		}
+	}
+
 	async function handleAddSource() {
 		addingSource = true;
 		try {
 			const req: CreateSourceRequest = {};
 			if (sourceType === 'url') {
+				const invalid = parsedUrls.filter(u => !isValidUrl(u));
+				if (invalid.length > 0) {
+					addToast(`Invalid URL${invalid.length > 1 ? 's' : ''}: ${invalid.join(', ')}. Only http/https URLs are allowed.`, 'error');
+					addingSource = false;
+					return;
+				}
 				if (parsedUrls.length === 1) {
 					req.url = parsedUrls[0];
 					req.source_identifier = parsedUrls[0];
@@ -519,6 +534,10 @@
 
 	async function handleCrawl() {
 		if (parsedUrls.length === 0) return;
+		if (!isValidUrl(parsedUrls[0])) {
+			addToast('Invalid URL. Only http/https URLs are allowed.', 'error');
+			return;
+		}
 		crawling = true;
 		try {
 			const res = await crawlSite(slug, parsedUrls[0], crawlMaxPages, crawlMaxDepth);
@@ -893,7 +912,13 @@
 						</label>
 						<label class="block">
 							<span class="text-sm text-text-muted">Embedding Model</span>
-							<input bind:value={model.embedding_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
+							<select bind:value={model.embedding_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent">
+								<option value="voyage-4-lite">voyage-4-lite</option>
+								<option value="voyage-4">voyage-4</option>
+								<option value="voyage-3">voyage-3</option>
+								<option value="voyage-3-large">voyage-3-large</option>
+								<option value="voyage-code-3">voyage-code-3</option>
+							</select>
 						</label>
 					</div>
 					<label class="flex items-center gap-2">
@@ -943,7 +968,11 @@
 					<div class="grid grid-cols-2 gap-4">
 						<label class="block">
 							<span class="text-sm text-text-muted">Generation Model</span>
-							<input bind:value={model.generation_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
+							<select bind:value={model.generation_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent">
+								<option value="claude-haiku-4-5">claude-haiku-4-5</option>
+								<option value="claude-sonnet-4-5">claude-sonnet-4-5</option>
+								<option value="claude-opus-4">claude-opus-4</option>
+							</select>
 						</label>
 						<div>
 							<div class="flex items-center gap-2">
@@ -1318,7 +1347,7 @@
 					</form>
 				{:else}
 					<div class="flex gap-2 items-center">
-						<input bind:this={fileInput} type="file" multiple class="hidden" onchange={handleUpload} />
+						<input bind:this={fileInput} type="file" multiple accept=".txt,.md,.html,.htm,.pdf" class="hidden" onchange={handleUpload} />
 						<button
 							type="button"
 							onclick={() => fileInput?.click()}

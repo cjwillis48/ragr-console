@@ -69,6 +69,7 @@ export interface RagModelUpdate {
 	name?: string | null;
 	description?: string | null;
 	system_prompt?: string | null;
+	chat_theme?: WidgetTheme | null;
 	chunk_size?: number | null;
 	chunk_overlap?: number | null;
 	similarity_threshold?: number | null;
