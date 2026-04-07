@@ -631,10 +631,27 @@
 		setTimeout(() => (embedCopiedInTab = false), 2000);
 	}
 
+	const THEME_DEFAULTS: Record<string, string | number | boolean> = {
+		primary_color: '#6366f1',
+		bg_color: '#0f172a',
+		text_color: '#e2e8f0',
+		user_bubble_color: '#4f46e5',
+		bot_bubble_color: '#1e293b',
+		border_radius: 12,
+		show_sample_questions_in_greeting: true
+	};
+
 	async function handleSaveTheme() {
 		savingTheme = true;
+		// Fill in defaults for any unset fields so all values are always sent
+		const payload = { ...theme };
+		for (const [key, fallback] of Object.entries(THEME_DEFAULTS)) {
+			if (payload[key as keyof typeof payload] == null) {
+				(payload as Record<string, unknown>)[key] = fallback;
+			}
+		}
 		try {
-			theme = await updateTheme(slug, theme);
+			theme = await updateTheme(slug, payload);
 			addToast('Theme saved', 'success');
 			themeSuccess = true;
 			setTimeout(() => themeSuccess = false, 1500);
