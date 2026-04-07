@@ -230,12 +230,11 @@
 	function postWidgetSize(open: boolean) {
 		if (alwaysOpen) return;
 		try {
-			const isMobile = window.innerWidth < 768;
 			window.parent?.postMessage({
 				type: 'ragr-widget-resize',
 				isOpen: open,
-				width: open ? (isMobile ? window.innerWidth : panelWidth + 32) : 80,
-				height: open ? (isMobile ? window.innerHeight : panelHeight + 32) : 80
+				width: open ? 450 : 80,
+				height: open ? 650 : 80
 			}, '*');
 		} catch {
 			// cross-origin postMessage may fail silently
@@ -265,12 +264,12 @@
 {#if isChatAvailable}
 	<div
 		in:fly={{ x: alwaysOpen ? 0 : 96, duration: alwaysOpen ? 0 : 320, opacity: alwaysOpen ? 1 : 0 }}
-		class="{alwaysOpen ? 'w-full h-dvh' : isOpen ? 'fixed right-4 bottom-4 z-40 max-md:inset-0' : 'fixed right-4 bottom-4 z-40'}"
+		class="{alwaysOpen ? 'w-full h-dvh' : 'fixed right-4 bottom-4 z-40'}"
 		style="font-family: {font};"
 	>
 		{#if isOpen}
 			<section
-				class="relative flex flex-col {alwaysOpen ? 'w-full h-full' : 'shadow-2xl max-md:w-full! max-md:h-dvh! max-md:max-w-none! max-md:max-h-none! max-md:rounded-none! max-md:border-none!'} overflow-hidden"
+				class="relative flex flex-col {alwaysOpen ? 'w-full h-full' : 'shadow-2xl'} overflow-hidden"
 				style="{alwaysOpen ? '' : `width: ${panelWidth}px; height: ${panelHeight}px; max-width: calc(100vw - 2rem); max-height: 70vh;`} background: {bg}; color: {txt}; border-radius: {alwaysOpen ? 0 : radius}px; border: {alwaysOpen ? 'none' : `1px solid ${borderColor}`};"
 				aria-label="{modelInfo?.name ?? 'Chat'} assistant"
 			>
