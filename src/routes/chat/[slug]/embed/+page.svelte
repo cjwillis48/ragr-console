@@ -106,6 +106,7 @@
 			} else {
 				showLauncherHint = true;
 				launcherHintTimeout = setTimeout(() => { showLauncherHint = false; }, LAUNCHER_HINT_MS);
+				postWidgetSize(false);
 			}
 		} catch {
 			isChatAvailable = false;
@@ -224,6 +225,28 @@
 	let borderColor = $derived(`color-mix(in srgb, ${txt} 20%, transparent)`);
 	let label = $derived(theme.label?.trim() || '');
 	let hint = $derived(theme.launcher_hint?.trim() || '');
+
+	// Notify parent frame of widget size changes so it can resize the iframe
+	function postWidgetSize(open: boolean) {
+		if (alwaysOpen) return;
+		try {
+			window.parent?.postMessage({
+				type: 'ragr-widget-resize',
+				isOpen: open,
+				width: open ? panelWidth + 32 : 80,
+				height: open ? panelHeight + 32 : 80
+			}, '*');
+		} catch {
+			// cross-origin postMessage may fail silently
+		}
+	}
+
+	$effect(() => {
+		// Access reactive values so Svelte tracks them as dependencies
+		void panelWidth;
+		void panelHeight;
+		postWidgetSize(isOpen);
+	});
 </script>
 
 <svelte:head>

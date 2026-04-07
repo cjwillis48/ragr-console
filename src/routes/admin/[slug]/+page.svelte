@@ -621,8 +621,7 @@
 	}
 
 	function getEmbedSnippet(): string {
-		const url = `${location.origin}/chat/${model?.slug}/embed`;
-		return `<iframe\n  src="${url}"\n  title="${model?.name || 'Chat'} Widget"\n  sandbox="allow-scripts allow-same-origin allow-forms"\n  style="position:fixed;bottom:0;right:0;width:450px;height:650px;border:none;z-index:9999;"\n></iframe>`;
+		return `<script src="${location.origin}/chat/${model?.slug}/loader.js"><\/script>`;
 	}
 
 	async function copyEmbedInTab() {
