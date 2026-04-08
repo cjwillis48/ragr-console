@@ -17,12 +17,21 @@ export const GET: RequestHandler = ({ params, url }) => {
     f.allow='clipboard-write';
     f.style.cssText='position:fixed;bottom:0;right:0;width:80px;height:80px;border:none;z-index:9999;background:transparent;color-scheme:normal;';
     document.body.appendChild(f);
+    var scrollPos;
     window.addEventListener('message',function(e){
-      if(!e.data||e.data.type!=='ragr-widget-resize')return;
+      if(!e.data)return;
       try{if(e.source!==f.contentWindow)return;}catch(_){}
-      f.style.width=e.data.width+'px';
-      f.style.height=e.data.height+'px';
+      if(e.data.type==='ragr-widget-resize'){
+        f.style.width=e.data.width+'px';
+        f.style.height=e.data.height+'px';
+      }else if(e.data.type==='ragr-widget-scroll-lock'){
+        scrollPos=window.scrollY;
+        window.addEventListener('scroll',lockScroll);
+      }else if(e.data.type==='ragr-widget-scroll-unlock'){
+        window.removeEventListener('scroll',lockScroll);
+      }
     });
+    function lockScroll(){window.scrollTo(0,scrollPos);}
   }
   if(document.body)init();
   else document.addEventListener('DOMContentLoaded',init);

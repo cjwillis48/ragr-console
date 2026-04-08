@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
 	import { onMount, onDestroy, tick } from 'svelte';
-	import { fly, fade } from 'svelte/transition';
+	import { fly } from 'svelte/transition';
 	import { fetchModelInfo, fetchTheme, streamChat } from '$lib/api';
 	import type { ModelInfo, WidgetTheme, Message } from '$lib/types';
 	import { isNonAnswered, getStatusLabel, getStatusDescription, getStatusBadgeClass, getStatusDescriptionClass, renderMarkdown, getSuggestionsForMessage as _getSuggestions } from '$lib/chat-utils';
@@ -34,6 +34,7 @@
 	const LAUNCHER_HINT_MS = 6500;
 	let launcherHintTimeout: ReturnType<typeof setTimeout> | undefined;
 	let abortController: AbortController | null = null;
+	let viewportHeight = $state(0);
 	let sampleQuestions = $state<string[]>([]);
 	const slug = $derived(page.params.slug!);
 
@@ -65,7 +66,6 @@
 	function stopResize() { isResizing = false; }
 
 	function handleResizeStart(event: PointerEvent) {
-		if (window.innerWidth < 768) return;
 		isResizing = true;
 		resizeStartX = event.clientX;
 		resizeStartY = event.clientY;
@@ -74,12 +74,18 @@
 		event.preventDefault();
 	}
 
+	function updateViewportHeight() {
+		viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+	}
+
 	onMount(async () => {
 		syncPanelSizeToViewport();
+		updateViewportHeight();
 		window.addEventListener('pointermove', handleResizeMove);
 		window.addEventListener('pointerup', stopResize);
 		window.addEventListener('pointercancel', stopResize);
 		window.addEventListener('resize', syncPanelSizeToViewport);
+		window.visualViewport?.addEventListener('resize', updateViewportHeight);
 
 		try {
 			const [info, themeData] = await Promise.all([
@@ -120,6 +126,7 @@
 		window.removeEventListener('pointerup', stopResize);
 		window.removeEventListener('pointercancel', stopResize);
 		window.removeEventListener('resize', syncPanelSizeToViewport);
+		window.visualViewport?.removeEventListener('resize', updateViewportHeight);
 	});
 
 	async function scrollToBottom() {
@@ -231,10 +238,10 @@
 		let width = 80;
 		let height = 80;
 		if (isOpen) {
-			width = 450;
-			height = 650;
+			width = Math.min(panelWidth + 32, window.innerWidth);
+			const vh = viewportHeight || window.innerHeight;
+			height = Math.min(panelHeight + 32, vh);
 		} else if (showLauncherHint && hint) {
-			// Wide enough for hint text + launcher button
 			width = 350;
 			height = 120;
 		}
@@ -248,6 +255,9 @@
 	$effect(() => {
 		void isOpen;
 		void showLauncherHint;
+		void panelWidth;
+		void panelHeight;
+		void viewportHeight;
 		postWidgetSize();
 	});
 </script>
@@ -273,14 +283,14 @@
 		{#if isOpen}
 			<section
 				class="relative flex flex-col {alwaysOpen ? 'w-full h-full' : 'shadow-2xl'} overflow-hidden"
-				style="{alwaysOpen ? '' : `width: ${panelWidth}px; height: ${panelHeight}px; max-width: calc(100vw - 2rem); max-height: 70vh;`} background: {bg}; color: {txt}; border-radius: {alwaysOpen ? 0 : radius}px; border: {alwaysOpen ? 'none' : `1px solid ${borderColor}`};"
+				style="{alwaysOpen ? '' : `width: ${panelWidth}px; height: ${panelHeight}px; max-width: calc(100vw - 2rem); max-height: ${viewportHeight ? viewportHeight - 32 : '70vh'}px;`} background: {bg}; color: {txt}; border-radius: {alwaysOpen ? 0 : radius}px; border: {alwaysOpen ? 'none' : `1px solid ${borderColor}`};"
 				aria-label="{modelInfo?.name ?? 'Chat'} assistant"
 			>
 				<!-- Resize handle -->
 				{#if !alwaysOpen}
 				<button
 					type="button"
-					class="hidden md:flex absolute top-0 left-0 h-8 w-8 items-center justify-center cursor-nwse-resize z-10 hover:opacity-100 transition-opacity"
+					class="flex absolute top-0 left-0 h-8 w-8 items-center justify-center cursor-nwse-resize z-10 hover:opacity-100 transition-opacity"
 					style="color: {txt}; opacity: 0.5;"
 					onpointerdown={handleResizeStart}
 					aria-label="Resize chat window"
@@ -374,6 +384,8 @@
 							class="min-h-11 max-h-28 flex-1 resize-y px-3 py-2 text-sm focus:outline-none"
 							style="background: color-mix(in srgb, {txt} 10%, {bg}); color: {txt}; border: 1px solid {borderColor}; border-radius: {radius}px;"
 							onkeydown={handleKeydown}
+							onfocus={() => { try { window.parent?.postMessage({ type: 'ragr-widget-scroll-lock' }, '*'); } catch {} }}
+							onblur={() => { try { window.parent?.postMessage({ type: 'ragr-widget-scroll-unlock' }, '*'); } catch {} }}
 						></textarea>
 						<button
 							type="submit"
@@ -394,7 +406,7 @@
 				{#if showLauncherHint && hint}
 					<div
 						in:fly={{ x: 56, duration: 260, opacity: 0 }}
-						out:fade={{ duration: 300 }}
+						out:fly={{ x: 80, duration: 600, opacity: 0 }}
 						class="rounded-xl px-3 py-2 text-xs shadow-md"
 						style="background: {bg}; color: {txt}; border: 1px solid {borderColor};"
 					>
