@@ -106,7 +106,7 @@
 			} else {
 				showLauncherHint = true;
 				launcherHintTimeout = setTimeout(() => { showLauncherHint = false; }, LAUNCHER_HINT_MS);
-				postWidgetSize(false);
+				postWidgetSize();
 			}
 		} catch {
 			isChatAvailable = false;
@@ -226,26 +226,32 @@
 	let label = $derived(theme.label?.trim() || '');
 	let hint = $derived(theme.launcher_hint?.trim() || '');
 
+	let launcherArea = $state<HTMLDivElement>();
+
 	// Notify parent frame of widget size changes so it can resize the iframe
-	function postWidgetSize(open: boolean) {
+	function postWidgetSize() {
 		if (alwaysOpen) return;
+		let width = 80;
+		let height = 80;
+		if (isOpen) {
+			width = 450;
+			height = 650;
+		} else if (launcherArea) {
+			const rect = launcherArea.getBoundingClientRect();
+			width = Math.ceil(rect.width) + 32;
+			height = Math.ceil(rect.height) + 32;
+		}
 		try {
-			window.parent?.postMessage({
-				type: 'ragr-widget-resize',
-				isOpen: open,
-				width: open ? 450 : 80,
-				height: open ? 650 : 80
-			}, '*');
+			window.parent?.postMessage({ type: 'ragr-widget-resize', width, height }, '*');
 		} catch {
 			// cross-origin postMessage may fail silently
 		}
 	}
 
 	$effect(() => {
-		// Access reactive values so Svelte tracks them as dependencies
-		void panelWidth;
-		void panelHeight;
-		postWidgetSize(isOpen);
+		void isOpen;
+		void showLauncherHint;
+		postWidgetSize();
 	});
 </script>
 
@@ -387,7 +393,7 @@
 				</form>
 			</section>
 		{:else}
-			<div class="flex flex-col items-end gap-2">
+			<div bind:this={launcherArea} class="flex flex-col items-end gap-2">
 				{#if showLauncherHint && hint}
 					<div
 						in:fly={{ x: 56, duration: 260, opacity: 0 }}
