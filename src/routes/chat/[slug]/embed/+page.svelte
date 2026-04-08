@@ -106,7 +106,6 @@
 			} else {
 				showLauncherHint = true;
 				launcherHintTimeout = setTimeout(() => { showLauncherHint = false; }, LAUNCHER_HINT_MS);
-				postWidgetSize();
 			}
 		} catch {
 			isChatAvailable = false;
@@ -226,9 +225,7 @@
 	let label = $derived(theme.label?.trim() || '');
 	let hint = $derived(theme.launcher_hint?.trim() || '');
 
-	let launcherArea = $state<HTMLDivElement>();
-
-	// Notify parent frame of widget size changes so it can resize the iframe
+	// Notify parent frame of widget size so loader.js can resize the iframe
 	function postWidgetSize() {
 		if (alwaysOpen) return;
 		let width = 80;
@@ -236,10 +233,10 @@
 		if (isOpen) {
 			width = 450;
 			height = 650;
-		} else if (launcherArea) {
-			const rect = launcherArea.getBoundingClientRect();
-			width = Math.ceil(rect.width) + 32;
-			height = Math.ceil(rect.height) + 32;
+		} else if (showLauncherHint && hint) {
+			// Wide enough for hint text + launcher button
+			width = 350;
+			height = 120;
 		}
 		try {
 			window.parent?.postMessage({ type: 'ragr-widget-resize', width, height }, '*');
@@ -393,7 +390,7 @@
 				</form>
 			</section>
 		{:else}
-			<div bind:this={launcherArea} class="flex flex-col items-end gap-2">
+			<div class="flex flex-col items-end gap-2">
 				{#if showLauncherHint && hint}
 					<div
 						in:fly={{ x: 56, duration: 260, opacity: 0 }}

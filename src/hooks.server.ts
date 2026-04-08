@@ -5,6 +5,7 @@ import { env } from '$env/dynamic/public';
 import { logError } from '$lib/axiom';
 
 function originBlockedResponse(refererOrigin: string): Response {
+	const safeOrigin = JSON.stringify(refererOrigin);
 	const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +13,7 @@ function originBlockedResponse(refererOrigin: string): Response {
 <style>html,body{margin:0;padding:0;background:transparent;}</style>
 </head>
 <body>
-<script>console.warn('[ragr] Chat widget blocked: "${refererOrigin}" is not in the allowed origins for this model.');</script>
+<script>console.warn('[ragr] Chat widget blocked: '+${safeOrigin}+' is not in the allowed origins for this model.');</script>
 </body>
 </html>`;
 
