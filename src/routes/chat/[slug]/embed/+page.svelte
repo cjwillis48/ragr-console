@@ -34,7 +34,6 @@
 	const LAUNCHER_HINT_MS = 6500;
 	let launcherHintTimeout: ReturnType<typeof setTimeout> | undefined;
 	let abortController: AbortController | null = null;
-	let viewportHeight = $state(0);
 	let sampleQuestions = $state<string[]>([]);
 	const slug = $derived(page.params.slug!);
 
@@ -42,25 +41,12 @@
 		return Math.min(Math.max(value, min), max);
 	}
 
-	function getMaxPanelSize() {
-		const maxWidth = Math.max(MIN_PANEL_WIDTH, window.innerWidth - 32);
-		const maxHeight = Math.max(MIN_PANEL_HEIGHT, Math.floor(window.innerHeight * 0.7));
-		return { width: maxWidth, height: maxHeight };
-	}
-
-	function syncPanelSizeToViewport() {
-		const { width, height } = getMaxPanelSize();
-		panelWidth = clamp(panelWidth, MIN_PANEL_WIDTH, width);
-		panelHeight = clamp(panelHeight, MIN_PANEL_HEIGHT, height);
-	}
-
 	function handleResizeMove(event: PointerEvent) {
 		if (!isResizing) return;
 		const deltaX = resizeStartX - event.clientX;
 		const deltaY = resizeStartY - event.clientY;
-		const { width, height } = getMaxPanelSize();
-		panelWidth = clamp(resizeStartWidth + deltaX, MIN_PANEL_WIDTH, width);
-		panelHeight = clamp(resizeStartHeight + deltaY, MIN_PANEL_HEIGHT, height);
+		panelWidth = clamp(resizeStartWidth + deltaX, MIN_PANEL_WIDTH, 600);
+		panelHeight = clamp(resizeStartHeight + deltaY, MIN_PANEL_HEIGHT, 800);
 	}
 
 	function stopResize() { isResizing = false; }
@@ -74,18 +60,10 @@
 		event.preventDefault();
 	}
 
-	function updateViewportHeight() {
-		viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-	}
-
 	onMount(async () => {
-		syncPanelSizeToViewport();
-		updateViewportHeight();
 		window.addEventListener('pointermove', handleResizeMove);
 		window.addEventListener('pointerup', stopResize);
 		window.addEventListener('pointercancel', stopResize);
-		window.addEventListener('resize', syncPanelSizeToViewport);
-		window.visualViewport?.addEventListener('resize', updateViewportHeight);
 
 		try {
 			const [info, themeData] = await Promise.all([
@@ -125,8 +103,6 @@
 		window.removeEventListener('pointermove', handleResizeMove);
 		window.removeEventListener('pointerup', stopResize);
 		window.removeEventListener('pointercancel', stopResize);
-		window.removeEventListener('resize', syncPanelSizeToViewport);
-		window.visualViewport?.removeEventListener('resize', updateViewportHeight);
 	});
 
 	async function scrollToBottom() {
@@ -238,9 +214,8 @@
 		let width = 80;
 		let height = 80;
 		if (isOpen) {
-			width = Math.min(panelWidth + 32, window.innerWidth);
-			const vh = viewportHeight || window.innerHeight;
-			height = Math.min(panelHeight + 32, vh);
+			width = panelWidth + 32;
+			height = panelHeight + 32;
 		} else if (showLauncherHint && hint) {
 			width = 350;
 			height = 120;
@@ -257,7 +232,6 @@
 		void showLauncherHint;
 		void panelWidth;
 		void panelHeight;
-		void viewportHeight;
 		postWidgetSize();
 	});
 </script>
@@ -283,7 +257,7 @@
 		{#if isOpen}
 			<section
 				class="relative flex flex-col {alwaysOpen ? 'w-full h-full' : 'shadow-2xl'} overflow-hidden"
-				style="{alwaysOpen ? '' : `width: ${panelWidth}px; height: ${panelHeight}px; max-width: calc(100vw - 2rem); max-height: ${viewportHeight ? viewportHeight - 32 : '70vh'}px;`} background: {bg}; color: {txt}; border-radius: {alwaysOpen ? 0 : radius}px; border: {alwaysOpen ? 'none' : `1px solid ${borderColor}`};"
+				style="{alwaysOpen ? '' : `width: ${panelWidth}px; height: ${panelHeight}px;`} background: {bg}; color: {txt}; border-radius: {alwaysOpen ? 0 : radius}px; border: {alwaysOpen ? 'none' : `1px solid ${borderColor}`};"
 				aria-label="{modelInfo?.name ?? 'Chat'} assistant"
 			>
 				<!-- Resize handle -->
