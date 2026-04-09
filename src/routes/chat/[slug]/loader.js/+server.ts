@@ -22,8 +22,8 @@ export const GET: RequestHandler = ({ params, url }) => {
       if(!e.data)return;
       try{if(e.source!==f.contentWindow)return;}catch(_){}
       if(e.data.type==='ragr-widget-resize'){
-        f.style.width=e.data.width+'px';
-        f.style.height=e.data.height+'px';
+        f.style.width=Math.min(e.data.width,window.innerWidth)+'px';
+        f.style.height=Math.min(e.data.height,window.innerHeight)+'px';
       }else if(e.data.type==='ragr-widget-scroll-lock'){
         scrollPos=window.scrollY;
         window.addEventListener('scroll',lockScroll);

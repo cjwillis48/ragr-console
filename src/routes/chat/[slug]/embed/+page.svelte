@@ -52,6 +52,7 @@
 	function stopResize() { isResizing = false; }
 
 	function handleResizeStart(event: PointerEvent) {
+		if (window.innerWidth < 768) return;
 		isResizing = true;
 		resizeStartX = event.clientX;
 		resizeStartY = event.clientY;
@@ -257,14 +258,14 @@
 		{#if isOpen}
 			<section
 				class="relative flex flex-col {alwaysOpen ? 'w-full h-full' : 'shadow-2xl'} overflow-hidden"
-				style="{alwaysOpen ? '' : `width: ${panelWidth}px; height: ${panelHeight}px;`} background: {bg}; color: {txt}; border-radius: {alwaysOpen ? 0 : radius}px; border: {alwaysOpen ? 'none' : `1px solid ${borderColor}`};"
+				style="{alwaysOpen ? '' : `width: ${panelWidth}px; height: ${panelHeight}px; max-width: 100vw; max-height: 100dvh;`} background: {bg}; color: {txt}; border-radius: {alwaysOpen ? 0 : radius}px; border: {alwaysOpen ? 'none' : `1px solid ${borderColor}`};"
 				aria-label="{modelInfo?.name ?? 'Chat'} assistant"
 			>
 				<!-- Resize handle -->
 				{#if !alwaysOpen}
 				<button
 					type="button"
-					class="flex absolute top-0 left-0 h-8 w-8 items-center justify-center cursor-nwse-resize z-10 hover:opacity-100 transition-opacity"
+					class="hidden md:flex absolute top-0 left-0 h-8 w-8 items-center justify-center cursor-nwse-resize z-10 hover:opacity-100 transition-opacity"
 					style="color: {txt}; opacity: 0.5;"
 					onpointerdown={handleResizeStart}
 					aria-label="Resize chat window"
