@@ -49,7 +49,7 @@
 		panelHeight = clamp(resizeStartHeight + deltaY, MIN_PANEL_HEIGHT, 800);
 	}
 
-	function stopResize() { isResizing = false; }
+	function stopResize() { if (isResizing) { isResizing = false; postWidgetSize(); } }
 
 	function handleResizeStart(event: PointerEvent) {
 		if (window.innerWidth < 768) return;
@@ -90,7 +90,8 @@
 				isOpen = true;
 			} else {
 				showLauncherHint = true;
-				launcherHintTimeout = setTimeout(() => { showLauncherHint = false; }, LAUNCHER_HINT_MS);
+				postWidgetSize();
+				launcherHintTimeout = setTimeout(() => { showLauncherHint = false; postWidgetSize(); }, LAUNCHER_HINT_MS);
 			}
 		} catch {
 			isChatAvailable = false;
@@ -194,6 +195,7 @@
 		}
 		if (event.key === 'Escape' && isOpen) {
 			isOpen = false;
+			postWidgetSize();
 		}
 	}
 
@@ -210,31 +212,28 @@
 	let hint = $derived(theme.launcher_hint?.trim() || '');
 
 	// Notify parent frame of widget size so loader.js can resize the iframe
-	function postWidgetSize() {
-		if (alwaysOpen) return;
-		let width = 80;
-		let height = 80;
-		if (isOpen) {
-			width = panelWidth + 32;
-			height = panelHeight + 32;
-		} else if (showLauncherHint && hint) {
-			width = 350;
-			height = 120;
-		}
-		try {
-			window.parent?.postMessage({ type: 'ragr-widget-resize', width, height }, '*');
-		} catch {
-			// cross-origin postMessage may fail silently
-		}
-	}
+	let resizeTimer: ReturnType<typeof setTimeout> | undefined;
 
-	$effect(() => {
-		void isOpen;
-		void showLauncherHint;
-		void panelWidth;
-		void panelHeight;
-		postWidgetSize();
-	});
+	function postWidgetSize() {
+		if (alwaysOpen || typeof window === 'undefined') return;
+		clearTimeout(resizeTimer);
+		resizeTimer = setTimeout(() => {
+			let width = 80;
+			let height = 80;
+			if (isOpen) {
+				width = panelWidth + 32;
+				height = panelHeight + 32;
+			} else if (showLauncherHint && hint) {
+				width = 350;
+				height = 120;
+			}
+			try {
+				window.parent?.postMessage({ type: 'ragr-widget-resize', width, height }, '*');
+			} catch {
+				// cross-origin postMessage may fail silently
+			}
+		}, 16);
+	}
 </script>
 
 <svelte:head>
@@ -247,7 +246,7 @@
 	</style>
 </svelte:head>
 
-<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && isOpen) isOpen = false; }} />
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && isOpen) { isOpen = false; postWidgetSize(); } }} />
 
 {#if isChatAvailable}
 	<div
@@ -288,7 +287,7 @@
 					<button
 						class="text-sm px-2 py-1 rounded-md"
 						style="opacity: 0.7;"
-						onclick={() => (isOpen = false)}
+						onclick={() => { isOpen = false; postWidgetSize(); }}
 						aria-label="Close chat"
 					>
 						Close
@@ -392,7 +391,7 @@
 					in:fly={{ x: 72, duration: 300, opacity: 0 }}
 					class="inline-flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200 hover:scale-[1.02] active:scale-95"
 					style="background: {primary};"
-					onclick={() => { isOpen = true; showLauncherHint = false; focusInput(); }}
+					onclick={() => { isOpen = true; showLauncherHint = false; postWidgetSize(); focusInput(); }}
 					aria-label="Open chat assistant"
 					title="Open {modelInfo?.name ?? 'Chat'}"
 				>
