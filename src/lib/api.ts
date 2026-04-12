@@ -1,12 +1,18 @@
-import { env } from '$env/dynamic/public';
-import type { ModelInfo, WidgetTheme, Message } from './types';
-import type { SSEEvent } from './types';
+import type { ModelInfo, WidgetTheme } from './types';
 import { parseSSE } from './sse';
 
-const baseUrl = () => env.PUBLIC_RAGR_API_URL;
+export interface ApiConfig {
+	baseUrl: string;
+}
 
-export async function fetchModelInfo(slug: string): Promise<ModelInfo> {
-	const res = await fetch(`${baseUrl()}/models/${slug}/info`);
+export interface StreamCallbacks {
+	onDelta: (text: string) => void;
+	onDone: (answer: string, status: string) => void;
+	onError: (msg: string) => void;
+}
+
+export async function fetchModelInfo(cfg: ApiConfig, slug: string): Promise<ModelInfo> {
+	const res = await fetch(`${cfg.baseUrl}/models/${slug}/info`);
 	if (!res.ok) {
 		if (res.status === 404) throw new Error('not_found');
 		throw new Error(`Failed to load model info (${res.status})`);
@@ -14,19 +20,14 @@ export async function fetchModelInfo(slug: string): Promise<ModelInfo> {
 	return res.json();
 }
 
-export async function fetchTheme(slug: string): Promise<WidgetTheme> {
-	const res = await fetch(`${baseUrl()}/models/${slug}/theme`);
+export async function fetchTheme(cfg: ApiConfig, slug: string): Promise<WidgetTheme> {
+	const res = await fetch(`${cfg.baseUrl}/models/${slug}/theme`);
 	if (!res.ok) throw new Error(`Failed to load theme (${res.status})`);
 	return res.json();
 }
 
-interface StreamCallbacks {
-	onDelta: (text: string) => void;
-	onDone: (answer: string, status: string) => void;
-	onError: (msg: string) => void;
-}
-
 export async function streamChat(
+	cfg: ApiConfig,
 	slug: string,
 	question: string,
 	sessionId: string,
@@ -35,13 +36,13 @@ export async function streamChat(
 ): Promise<void> {
 	let res: Response;
 	try {
-		res = await fetch(`${baseUrl()}/models/${slug}/chat`, {
+		res = await fetch(`${cfg.baseUrl}/models/${slug}/chat`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ question, stream: true, session_id: sessionId }),
 			signal
 		});
-	} catch (err: unknown) {
+	} catch {
 		if (signal?.aborted) return;
 		callbacks.onError('Network error. Please check your connection and try again.');
 		return;
@@ -67,7 +68,7 @@ export async function streamChat(
 					return;
 			}
 		}
-	} catch (err: unknown) {
+	} catch {
 		if (signal?.aborted) return;
 		callbacks.onError('Connection lost. Please try again.');
 	}

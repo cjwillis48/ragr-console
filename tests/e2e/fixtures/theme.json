@@ -1,0 +1,14 @@
+{
+	"label": "Playwright Helper",
+	"greeting": "Hello from the fixture. Ask me anything.",
+	"placeholder": "Type a question…",
+	"launcher_hint": "Need help? Ask me!",
+	"primary_color": "#ff6600",
+	"bg_color": "#101820",
+	"text_color": "#f3f4f6",
+	"user_bubble_color": "#ff6600",
+	"bot_bubble_color": "#1f2937",
+	"font_family": "Roboto",
+	"border_radius": 10,
+	"show_sample_questions_in_greeting": true
+}

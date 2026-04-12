@@ -1,0 +1,31 @@
+# Cloudflare Pages response headers for the embeddable widget.
+#
+# The widget bundle is fetched cross-origin from every customer site, so it
+# needs permissive CORS. The unversioned file gets a short cache so bug
+# fixes propagate within ~5 minutes; the hashed file is cached for a year
+# because its contents never change for a given sha.
+
+/widget/ragr-chat.js
+  Cache-Control: public, max-age=300, s-maxage=300
+  Access-Control-Allow-Origin: *
+
+/widget/ragr-chat.*.js
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Source maps — same caching as the JS file they describe.
+/widget/ragr-chat.js.map
+  Cache-Control: public, max-age=300
+  Access-Control-Allow-Origin: *
+
+/widget/ragr-chat.*.js.map
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+# Loader script — short cache so loader-level changes roll out quickly.
+# Note: this path is served by the SvelteKit +server.ts endpoint, not as a
+# static file, so the headers here are a no-op for those responses. The
+# endpoint sets Cache-Control itself. This entry is kept as documentation.
+/chat/*/loader.js
+  Cache-Control: public, max-age=300
+  Access-Control-Allow-Origin: *

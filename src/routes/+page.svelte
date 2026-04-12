@@ -1,5 +1,24 @@
 <script lang="ts">
 	import { Show } from 'svelte-clerk';
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
+	import { loadRagrWidgetBundle } from '$lib/load-ragr-widget-bundle';
+
+	// Load the widget bundle on mount. The embeddable <ragr-chat> custom
+	// element registers itself as a side effect and we mount it in inline
+	// mode so it fills the hero card container.
+	let widgetReady = $state(false);
+
+	onMount(() => {
+		if (!browser) return;
+		void loadRagrWidgetBundle({
+			warnMessage: '[ragr] landing page widget bundle failed to load'
+		})
+			.then(() => {
+				widgetReady = true;
+			})
+			.catch(() => {});
+	});
 </script>
 
 <svelte:head>
@@ -69,14 +88,24 @@
 			</div>
 
 			<!-- Live widget -->
+			<!--
+				Marketing-page demo of the real embeddable widget, in inline mode
+				so it fills the hero card instead of floating in the corner. Same
+				<ragr-chat> custom element that customers embed on their own sites
+				— this is both a demo and a dogfood of the new build. The bundle
+				is loaded once on mount via the script in the component script.
+			-->
 			<div class="flex justify-center lg:justify-end">
-				<div class="w-full max-w-100 h-137.5 rounded-xl overflow-hidden border border-border shadow-2xl shadow-accent/5">
-					<iframe
-						src="https://ragr.charliewillis.com/chat/ragr-landing-page/embed?expanded"
-						title="RAGr demo chat widget"
-						sandbox="allow-scripts allow-same-origin allow-forms"
-						class="w-full h-full border-none"
-					></iframe>
+				<div
+					class="w-full max-w-100 h-137.5 rounded-xl overflow-hidden border border-border shadow-2xl shadow-accent/5"
+				>
+					{#if widgetReady}
+						<ragr-chat slug="ragr-landing-page" inline open></ragr-chat>
+					{:else}
+						<div class="flex h-full items-center justify-center text-sm text-text-muted">
+							Loading…
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>

@@ -5,6 +5,12 @@
 
 <svelte:head><title>Sign In - RAGr</title></svelte:head>
 
+<!--
+	fallbackRedirectUrl lands users on /admin when they sign in without a
+	specific destination in mind (e.g. clicking "Sign In" from the marketing
+	page). Clerk still honors an explicit ?redirect_url= query param first,
+	so deep links into /admin/... survive the sign-in bounce correctly.
+-->
 <div class="min-h-dvh bg-surface flex items-center justify-center">
-	<SignIn appearance={{ baseTheme: dark }} />
+	<SignIn appearance={{ baseTheme: dark }} fallbackRedirectUrl="/admin" />
 </div>

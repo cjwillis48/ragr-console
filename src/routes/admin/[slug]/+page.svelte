@@ -50,8 +50,8 @@
 		WidgetTheme
 	} from '$lib/admin-types';
 	import {chunkRetrievalMethod, sortChunkRefs} from '$lib/admin-types';
-	import ChatPanel from '$lib/components/ChatPanel.svelte';
 	import {addToast} from '$lib/toast.svelte';
+	import {loadRagrWidgetBundle} from '$lib/load-ragr-widget-bundle';
 
 	const slug = $derived(page.params.slug!);
 
@@ -114,6 +114,42 @@
 	let theme = $state<WidgetTheme>({});
 	let savingTheme = $state(false);
 	let embedCopiedInTab = $state(false);
+
+	// Live widget preview wiring. The admin page hosts a real <ragr-chat>
+	// element in inline mode and pushes the current (possibly unsaved) theme
+	// state to it via the element's imperative `themeOverride` property. The
+	// widget merges those values over whatever it fetched from the backend
+	// so the preview updates instantly as the admin drags color pickers
+	// without requiring a save round-trip.
+	let widgetPreviewEl = $state<HTMLElement | null>(null);
+	let widgetBundleLoaded = $state(false);
+	let widgetBundleError = $state<string | null>(null);
+
+	async function ensureWidgetBundle(): Promise<void> {
+		if (widgetBundleLoaded) return;
+		if (typeof window === 'undefined') return;
+		try {
+			await loadRagrWidgetBundle();
+			widgetBundleLoaded = true;
+		} catch {
+			widgetBundleError = 'Failed to load widget bundle';
+			throw new Error('widget bundle load failed');
+		}
+	}
+
+	// Push the current in-memory theme to the widget element whenever it
+	// changes. The widget reads this as a Partial<WidgetTheme> and merges it
+	// over its own fetched theme. Cleared when the element is unmounted.
+	$effect(() => {
+		if (!widgetPreviewEl) return;
+		// Spread into a new object so Svelte's reactivity captures every key.
+		const override = { ...theme };
+		(
+			widgetPreviewEl as HTMLElement & {
+				themeOverride: Partial<WidgetTheme> | null;
+			}
+		).themeOverride = override;
+	});
 	let fontDropdownOpen = $state(false);
 	let fontFilterActive = $state(false);
 	const fontFamilies = ['Inter', 'Roboto', 'Open Sans', 'Poppins', 'Montserrat', 'Merriweather', 'Playfair Display', 'Courier New', 'Georgia', 'Fira Code'];
@@ -214,7 +250,11 @@
 		if (tab !== 'sources') stopSourcePolling();
 		try {
 			if (tab === 'widget') {
-				theme = await getTheme(slug);
+				// Lazy-load the widget bundle the first time the widget tab is
+				// opened. Parallel with the theme fetch — the bundle load is
+				// tiny and network-bound, theme fetch is tiny and API-bound.
+				const [themeResult] = await Promise.all([getTheme(slug), ensureWidgetBundle()]);
+				theme = themeResult;
 			} else if (tab === 'stats') {
 				[stats, dailyStats, topSources] = await Promise.all([
 					getStats(slug),
@@ -1227,27 +1267,39 @@
 
 				<div>
 					<span class="text-sm font-medium text-text-muted">Chat Panel Preview</span>
+					<!--
+						Live preview uses the real embeddable widget in inline mode.
+						The widget fetches the saved theme + model info from the
+						backend on mount, then an $effect in the script pushes the
+						currently-edited theme state to the element via its
+						imperative `themeOverride` property. That means the preview
+						reflects unsaved theme changes in real time (colors, fonts,
+						radius, greeting, etc.) while still showing the real streamed
+						responses from the backend.
+
+						Unsaved changes to the model settings themselves (name,
+						sample questions, is_active) are not reflected until the
+						model is saved — that data comes from the widget's own
+						fetch of /models/{slug}/info. Intentional trade-off: those
+						fields live on the Settings tab, not the Widget tab.
+					-->
 					<div class="mt-2 rounded-lg overflow-hidden" style="height: 500px;">
-						<ChatPanel
-							slug={model.slug}
-							name={model.name}
-							description={model.description}
-							label={theme.label}
-							greeting={theme.greeting ?? ''}
-							placeholder={theme.placeholder ?? ''}
-							launcherHint={theme.launcher_hint}
-							acceptingRequests={model.is_active}
-							inline={true}
-							primaryColor={theme.primary_color}
-							bgColor={theme.bg_color}
-							textColor={theme.text_color}
-							userBubbleColor={theme.user_bubble_color}
-							botBubbleColor={theme.bot_bubble_color}
-							fontFamily={theme.font_family}
-							borderRadius={theme.border_radius}
-							sampleQuestions={model.sample_questions}
-							showSampleQuestionsInGreeting={theme.show_sample_questions_in_greeting === true}
-						/>
+						{#if widgetBundleError}
+							<div class="flex h-full items-center justify-center text-sm text-text-muted">
+								{widgetBundleError}
+							</div>
+						{:else if widgetBundleLoaded}
+							<ragr-chat
+								bind:this={widgetPreviewEl}
+								slug={model.slug}
+								inline
+								open
+							></ragr-chat>
+						{:else}
+							<div class="flex h-full items-center justify-center text-sm text-text-muted">
+								Loading preview…
+							</div>
+						{/if}
 					</div>
 				</div>
 
