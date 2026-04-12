@@ -203,8 +203,13 @@ svg { display: block; }
 	:host(:not([inline])) .ragr-panel[data-size="large"] {
 		position: fixed;
 		inset: 0;
-		width: 100vw;
-		height: 100dvh;
+		/* Let inset:0 derive the size — no explicit width/height. Using
+		   100dvh here would prevent the panel from shrinking when the
+		   mobile virtual keyboard opens, because the explicit height
+		   overrides the inset-derived height. With inset:0 alone the
+		   browser adjusts bottom:0 to sit above the keyboard. */
+		width: auto;
+		height: auto;
 		max-width: none;
 		max-height: none;
 		border-radius: 0;
@@ -447,7 +452,7 @@ svg { display: block; }
 }
 .ragr-suggestion {
 	padding: 0.25rem 0.625rem;
-	border-radius: 999px;
+	border-radius: 8px;
 	font-size: 11px;
 	line-height: 1.3;
 	background: var(--ragr-soft-fill);
