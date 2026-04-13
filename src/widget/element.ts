@@ -35,6 +35,7 @@ export class RagrChatElement extends HTMLElement {
 	#styleInjected = false;
 	#themeOverride: Partial<WidgetTheme> | null = null;
 	#lastFontFamily: string | null = null;
+	#vvCleanup: (() => void) | null = null;
 
 	constructor() {
 		super();
@@ -58,12 +59,36 @@ export class RagrChatElement extends HTMLElement {
 			this.#shadow.appendChild(style);
 			this.#styleInjected = true;
 		}
+		this.#startVisualViewportTracking();
 		this.#rerender();
 	}
 
 	disconnectedCallback() {
 		this.#mounted = false;
+		this.#vvCleanup?.();
+		this.#vvCleanup = null;
 		render(null, this.#shadow);
+	}
+
+	// Track the visual viewport height so the mobile fullscreen layout can
+	// shrink when the virtual keyboard opens. CSS `100dvh` and `inset: 0`
+	// don't reliably account for the keyboard on Firefox Android and older
+	// iOS Safari. The visualViewport API gives us the real visible height;
+	// we expose it as a CSS custom property that the mobile media query
+	// uses for the panel height.
+	#startVisualViewportTracking() {
+		const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+		if (!vv) return;
+		const update = () => {
+			this.style.setProperty('--ragr-vvh', `${vv.height}px`);
+		};
+		vv.addEventListener('resize', update);
+		vv.addEventListener('scroll', update);
+		update();
+		this.#vvCleanup = () => {
+			vv.removeEventListener('resize', update);
+			vv.removeEventListener('scroll', update);
+		};
 	}
 
 	attributeChangedCallback(_name: string, oldValue: string | null, newValue: string | null) {

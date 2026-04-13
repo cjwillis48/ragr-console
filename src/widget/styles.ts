@@ -202,14 +202,14 @@ svg { display: block; }
 	:host(:not([inline])) .ragr-panel,
 	:host(:not([inline])) .ragr-panel[data-size="large"] {
 		position: fixed;
-		inset: 0;
-		/* Let inset:0 derive the size — no explicit width/height. Using
-		   100dvh here would prevent the panel from shrinking when the
-		   mobile virtual keyboard opens, because the explicit height
-		   overrides the inset-derived height. With inset:0 alone the
-		   browser adjusts bottom:0 to sit above the keyboard. */
-		width: auto;
-		height: auto;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		/* --ragr-vvh is set by element.ts from the visualViewport API.
+		   It tracks the VISIBLE viewport height — excluding the virtual
+		   keyboard. Falls back to 100dvh when visualViewport is not
+		   available (desktop, or very old mobile browsers). */
+		height: var(--ragr-vvh, 100dvh);
 		max-width: none;
 		max-height: none;
 		border-radius: 0;
