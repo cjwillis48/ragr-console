@@ -103,6 +103,38 @@ export function App(props: AppProps): ComponentChildren {
 		return () => document.removeEventListener('keydown', onKey);
 	}, [props.inline, isOpen]);
 
+	// Body scroll lock for mobile fullscreen. When the panel covers the
+	// entire viewport (≤640px), prevent the parent page from scrolling
+	// underneath. Without this, focusing the textarea triggers the browser's
+	// native "scroll focused element into view" behavior which scrolls the
+	// PARENT page instead of the panel — pushing the chat out of view.
+	// Same pattern Intercom/Drift use for their mobile overlays.
+	useEffect(() => {
+		if (props.inline || !isOpen) return;
+		if (typeof window === 'undefined') return;
+		// Only lock on mobile-width viewports where the panel goes fullscreen.
+		if (window.innerWidth > 640) return;
+		const scrollY = window.scrollY;
+		const body = document.body;
+		const saved = {
+			overflow: body.style.overflow,
+			position: body.style.position,
+			width: body.style.width,
+			top: body.style.top
+		};
+		body.style.overflow = 'hidden';
+		body.style.position = 'fixed';
+		body.style.width = '100%';
+		body.style.top = `-${scrollY}px`;
+		return () => {
+			body.style.overflow = saved.overflow;
+			body.style.position = saved.position;
+			body.style.width = saved.width;
+			body.style.top = saved.top;
+			window.scrollTo(0, scrollY);
+		};
+	}, [props.inline, isOpen]);
+
 	const chat = useChat({
 		slug: props.slug,
 		apiBase: props.apiBase,

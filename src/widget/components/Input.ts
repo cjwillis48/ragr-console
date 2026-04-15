@@ -29,7 +29,10 @@ export function Input(props: InputProps): ComponentChildren {
 		if (props.autoFocus && ref.current) {
 			// Defer to next frame so the focus happens after the panel open
 			// transition has settled, avoiding iOS keyboard jank.
-			requestAnimationFrame(() => ref.current?.focus());
+			// preventScroll: true stops mobile browsers from scrolling the
+			// parent page to "bring the textarea into view" — the textarea is
+			// already visible inside the fixed-position panel.
+			requestAnimationFrame(() => ref.current?.focus({ preventScroll: true }));
 		}
 	}, [props.autoFocus]);
 
