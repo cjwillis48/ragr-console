@@ -52,6 +52,7 @@
 	import {chunkRetrievalMethod, sortChunkRefs} from '$lib/admin-types';
 	import {addToast} from '$lib/toast.svelte';
 	import {loadRagrWidgetBundle} from '$lib/load-ragr-widget-bundle';
+	import {ALLOWED_FONT_FAMILIES, SYSTEM_FONTS} from '$lib/font-allowlist';
 
 	const slug = $derived(page.params.slug!);
 
@@ -142,19 +143,15 @@
 	// over its own fetched theme. Cleared when the element is unmounted.
 	$effect(() => {
 		if (!widgetPreviewEl) return;
-		// Spread into a new object so Svelte's reactivity captures every key.
-		const override = { ...theme };
 		(
 			widgetPreviewEl as HTMLElement & {
 				themeOverride: Partial<WidgetTheme> | null;
 			}
-		).themeOverride = override;
+		).themeOverride = { ...theme };
 	});
 	let fontDropdownOpen = $state(false);
 	let fontFilterActive = $state(false);
-	const fontFamilies = ['Inter', 'Roboto', 'Open Sans', 'Poppins', 'Montserrat', 'Merriweather', 'Playfair Display', 'Courier New', 'Georgia', 'Fira Code'];
-	const systemFonts = ['Courier New', 'Georgia'];
-	const googleFontUrl = 'https://fonts.googleapis.com/css2?family=' + fontFamilies.filter(f => !systemFonts.includes(f)).map(f => f.replace(/ /g, '+')).join('&family=') + '&display=swap';
+	const googleFontUrl = 'https://fonts.googleapis.com/css2?family=' + ALLOWED_FONT_FAMILIES.filter(f => !SYSTEM_FONTS.has(f)).map(f => f.replace(/ /g, '+')).join('&family=') + '&display=swap';
 
 	function handleWindowClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
@@ -753,16 +750,16 @@
 {:else if !model}
 	<div class="text-text-muted">Model not found.</div>
 {:else}
-	<div class="mb-6">
+	<div class="mb-3">
 		<a href="/admin" class="text-sm text-text-muted hover:text-accent">&larr; All Models</a>
-		<div class="flex items-center gap-4 mt-2">
+		<div class="flex items-center gap-4 mt-1">
 			<h1 class="text-2xl font-semibold">{model.name}</h1>
 			<span class="text-sm text-text-muted font-mono">/{model.slug}</span>
 		</div>
 	</div>
 
 	<!-- Tabs -->
-	<div class="flex gap-1 border-b border-border mb-6">
+	<div class="flex gap-1 border-b border-border mb-4">
 		{#each tabs as tab}
 			<button
 				onclick={() => loadTab(tab.key)}
@@ -1147,36 +1144,39 @@
 
 	<!-- Widget Tab -->
 	{:else if activeTab === 'widget'}
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<!-- Theme Form -->
-			<form onsubmit={(e) => { e.preventDefault(); handleSaveTheme(); }} class="space-y-4">
-				<fieldset class="space-y-4">
-					<legend class="text-sm font-medium text-text-muted mb-2">Text</legend>
-					<label class="block">
-						<span class="text-sm text-text-muted">Label</span>
-						<input bind:value={theme.label} placeholder="Your assistant tagline" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
-					</label>
+			<form onsubmit={(e) => { e.preventDefault(); handleSaveTheme(); }} class="space-y-3">
+				<fieldset class="space-y-2">
+					<div class="grid grid-cols-2 gap-3">
+						<label class="block">
+							<span class="text-sm text-text-muted">Label</span>
+							<input bind:value={theme.label} placeholder="Your assistant tagline" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
+						</label>
+						<label class="block">
+							<span class="text-sm text-text-muted">Placeholder</span>
+							<input bind:value={theme.placeholder} placeholder="Ask a question..." class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
+						</label>
+					</div>
 					<label class="block">
 						<span class="text-sm text-text-muted">Greeting</span>
-						<textarea bind:value={theme.greeting} rows="2" placeholder="Hi! How can I help?" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text placeholder:text-text-muted focus:outline-none focus:border-accent resize-none"></textarea>
+						<textarea bind:value={theme.greeting} rows="1" placeholder="Hi! How can I help?" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent resize-none"></textarea>
 					</label>
-					<label class="block">
-						<span class="text-sm text-text-muted">Placeholder</span>
-						<input bind:value={theme.placeholder} placeholder="Ask a question..." class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
-					</label>
-					<label class="block">
-						<span class="text-sm text-text-muted">Launcher Hint</span>
-						<input bind:value={theme.launcher_hint} placeholder="Text shown above the chat button" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
-					</label>
-					<label class="flex items-center gap-2">
-						<input type="checkbox" bind:checked={theme.show_sample_questions_in_greeting} class="accent-accent" />
-						<span class="text-sm text-text-muted">Show sample questions in greeting</span>
-					</label>
+					<div class="flex items-end gap-3">
+						<label class="flex-1 block">
+							<span class="text-sm text-text-muted">Launcher Hint</span>
+							<input bind:value={theme.launcher_hint} placeholder="Text above chat button" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
+						</label>
+						<label class="flex items-center gap-2 pb-1.5 shrink-0">
+							<input type="checkbox" bind:checked={theme.show_sample_questions_in_greeting} class="accent-accent" />
+							<span class="text-xs text-text-muted">Sample Qs in greeting</span>
+						</label>
+					</div>
 				</fieldset>
 
-				<fieldset class="space-y-4">
-					<legend class="text-sm font-medium text-text-muted mb-2">Colors</legend>
-					<div class="grid grid-cols-2 gap-4">
+				<fieldset class="space-y-2">
+					<legend class="text-sm font-medium text-text-muted mb-1">Colors</legend>
+					<div class="grid grid-cols-2 gap-3">
 						{#each [
 							['Primary', 'primary_color', '#6366f1'],
 							['Background', 'bg_color', '#0f172a'],
@@ -1185,20 +1185,20 @@
 							['Bot Bubble', 'bot_bubble_color', '#1e293b']
 						] as [label, key, fallback]}
 							<label class="block">
-								<span class="text-sm text-text-muted">{label}</span>
-								<span class="mt-1 flex items-center gap-2">
+								<span class="text-xs text-text-muted">{label}</span>
+								<span class="mt-0.5 flex items-center gap-2">
 									<input
 										type="color"
 										value={themeColor(key, fallback)}
 										oninput={(e) => setThemeColor(key, e)}
-										class="h-9 w-9 rounded border border-border cursor-pointer"
+										class="h-8 w-8 rounded border border-border cursor-pointer shrink-0"
 									/>
 									<input
 										type="text"
 										value={themeColor(key, '')}
 										oninput={(e) => setThemeColor(key, e)}
 										placeholder={fallback}
-										class="flex-1 rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
+										class="flex-1 min-w-0 rounded-lg bg-surface-alt border border-border px-2 py-1 text-text font-mono text-xs placeholder:text-text-muted focus:outline-none focus:border-accent"
 									/>
 								</span>
 							</label>
@@ -1206,128 +1206,107 @@
 					</div>
 				</fieldset>
 
-				<fieldset class="space-y-4">
-					<legend class="text-sm font-medium text-text-muted mb-2">Style</legend>
-					<div class="block">
-						<span class="text-sm text-text-muted">Font Family</span>
-						<div class="relative mt-1 font-dropdown-wrapper">
-							<input
-								bind:value={theme.font_family}
-								placeholder="Inter"
-								onfocus={() => { fontDropdownOpen = true; fontFilterActive = false; }}
-								oninput={() => { fontDropdownOpen = true; fontFilterActive = true; }}
-								class="w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
-								style="font-family: {theme.font_family || 'inherit'};"
-							/>
-							{#if fontDropdownOpen}
-								<div class="absolute z-20 mt-1 w-full rounded-lg bg-surface-alt border border-border shadow-lg max-h-56 overflow-y-auto">
-									{#each fontFamilies.filter(f => !fontFilterActive || !theme.font_family || f.toLowerCase().includes((theme.font_family ?? '').toLowerCase())) as font}
-										<button
-											type="button"
-											class="w-full text-left px-3 py-2 text-sm text-text hover:bg-accent/20 transition-colors"
-											style="font-family: '{font}', sans-serif;"
-											onclick={() => { theme.font_family = font; fontDropdownOpen = false; fontFilterActive = false; }}
-										>
-											{font}
-										</button>
-									{/each}
-								</div>
-							{/if}
+				<fieldset class="space-y-2">
+					<legend class="text-sm font-medium text-text-muted mb-1">Style</legend>
+					<div class="grid grid-cols-2 gap-3">
+						<div class="block">
+							<span class="text-sm text-text-muted">Font Family</span>
+							<div class="relative mt-1 font-dropdown-wrapper">
+								<input
+									bind:value={theme.font_family}
+									placeholder="Inter"
+									onfocus={() => { fontDropdownOpen = true; fontFilterActive = false; }}
+									oninput={() => { fontDropdownOpen = true; fontFilterActive = true; }}
+									class="w-full rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-text text-sm placeholder:text-text-muted focus:outline-none focus:border-accent"
+									style="font-family: {theme.font_family || 'inherit'};"
+								/>
+								{#if fontDropdownOpen}
+									<div class="absolute z-20 mt-1 w-full rounded-lg bg-surface-alt border border-border shadow-lg max-h-48 overflow-y-auto">
+										{#each ALLOWED_FONT_FAMILIES.filter(f => !fontFilterActive || !theme.font_family || f.toLowerCase().includes((theme.font_family ?? '').toLowerCase())) as font}
+											<button
+												type="button"
+												class="w-full text-left px-3 py-1.5 text-sm text-text hover:bg-accent/20 transition-colors"
+												style="font-family: '{font}', sans-serif;"
+												onclick={() => { theme.font_family = font; fontDropdownOpen = false; fontFilterActive = false; }}
+											>
+												{font}
+											</button>
+										{/each}
+									</div>
+								{/if}
+							</div>
 						</div>
+						<label class="block">
+							<span class="text-sm text-text-muted">Border Radius (px)</span>
+							<input type="number" bind:value={theme.border_radius} placeholder="12" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-sm text-text focus:outline-none focus:border-accent" />
+						</label>
 					</div>
-					<label class="block">
-						<span class="text-sm text-text-muted">Border Radius (px)</span>
-						<input type="number" bind:value={theme.border_radius} placeholder="12" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
-					</label>
 				</fieldset>
 
-				<button
-					type="submit"
-					disabled={savingTheme}
-					class="rounded-lg px-6 py-2 text-white font-medium transition-colors duration-200 disabled:opacity-40 {themeSuccess ? 'bg-green-600' : 'bg-accent hover:bg-accent/90'}"
-				>
-					{savingTheme ? 'Saving...' : themeSuccess ? '\u2713 Saved' : 'Save Theme'}
-				</button>
+				<div class="sticky bottom-0 pt-2 pb-1 bg-surface z-10">
+					<button
+						type="submit"
+						disabled={savingTheme}
+						class="rounded-lg px-6 py-2 text-sm text-white font-medium transition-colors duration-200 disabled:opacity-40 {themeSuccess ? 'bg-green-600' : 'bg-accent hover:bg-accent/90'}"
+					>
+						{savingTheme ? 'Saving...' : themeSuccess ? '\u2713 Saved' : 'Save Theme'}
+					</button>
+				</div>
 			</form>
 
-			<!-- Embed Code + Preview -->
-			<div class="space-y-4">
-				<div>
-					<div class="flex items-center justify-between mb-2">
-						<span class="text-sm font-medium text-text-muted">Embed Code</span>
-						<button
-							onclick={copyEmbedInTab}
-							class="text-xs text-accent hover:underline"
-						>
-							{embedCopiedInTab ? 'Copied!' : 'Copy'}
-						</button>
-					</div>
-					<pre class="bg-surface-alt border border-border rounded-lg p-3 text-xs font-mono text-text overflow-x-auto whitespace-pre-wrap break-all">{getEmbedSnippet()}</pre>
+			<!-- Preview + Embed -->
+			<div class="space-y-2">
+				<!-- Embed snippet — single line with copy -->
+				<div class="flex items-center gap-3">
+					<span class="text-sm font-medium text-text-muted shrink-0">Embed Code</span>
+					<code class="flex-1 min-w-0 truncate rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-xs font-mono text-text">{getEmbedSnippet()}</code>
+					<button onclick={copyEmbedInTab} class="text-xs text-accent hover:underline shrink-0">
+						{embedCopiedInTab ? 'Copied!' : 'Copy'}
+					</button>
 				</div>
 
-				<div>
-					<span class="text-sm font-medium text-text-muted">Chat Panel Preview</span>
-					<!--
-						Live preview uses the real embeddable widget in inline mode.
-						The widget fetches the saved theme + model info from the
-						backend on mount, then an $effect in the script pushes the
-						currently-edited theme state to the element via its
-						imperative `themeOverride` property. That means the preview
-						reflects unsaved theme changes in real time (colors, fonts,
-						radius, greeting, etc.) while still showing the real streamed
-						responses from the backend.
-
-						Unsaved changes to the model settings themselves (name,
-						sample questions, is_active) are not reflected until the
-						model is saved — that data comes from the widget's own
-						fetch of /models/{slug}/info. Intentional trade-off: those
-						fields live on the Settings tab, not the Widget tab.
-					-->
-					<div class="mt-2 rounded-lg overflow-hidden" style="height: 500px;">
-						{#if widgetBundleError}
-							<div class="flex h-full items-center justify-center text-sm text-text-muted">
-								{widgetBundleError}
-							</div>
-						{:else if widgetBundleLoaded}
-							<ragr-chat
-								bind:this={widgetPreviewEl}
-								slug={model.slug}
-								inline
-								open
-							></ragr-chat>
-						{:else}
-							<div class="flex h-full items-center justify-center text-sm text-text-muted">
-								Loading preview…
-							</div>
-						{/if}
-					</div>
+				<!-- Live chat preview — uses the real widget panel height -->
+				<div class="rounded-lg overflow-hidden" style="height: 520px;">
+					{#if widgetBundleError}
+						<div class="flex h-full items-center justify-center text-sm text-text-muted">
+							{widgetBundleError}
+						</div>
+					{:else if widgetBundleLoaded}
+						<ragr-chat
+							bind:this={widgetPreviewEl}
+							slug={model.slug}
+							inline
+							open
+						></ragr-chat>
+					{:else}
+						<div class="flex h-full items-center justify-center text-sm text-text-muted">
+							Loading preview…
+						</div>
+					{/if}
 				</div>
 
-				<!-- Launcher preview -->
-				<div>
-					<span class="text-sm font-medium text-text-muted">Launcher Preview</span>
-					<div class="mt-2 flex flex-col items-end gap-2">
-						{#if launcherHintText}
-							<div
-								class="rounded-xl px-3 py-2 text-xs shadow-md border"
-								style="background: {theme.bg_color ?? '#0f172a'}; color: {theme.text_color ?? '#e2e8f0'}; border-color: color-mix(in srgb, {theme.text_color ?? '#e2e8f0'} 20%, transparent); font-family: {theme.font_family ?? 'inherit'};"
-							>
-								{launcherHintText}
-							</div>
-						{/if}
-						<button
-							aria-label="Open chat"
-							class="inline-flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg"
-							style="background: {theme.primary_color ?? '#6366f1'};"
+				<!-- Launcher preview — stacked like the real widget: hint above, FAB below -->
+				<div class="flex flex-col items-end gap-1.5">
+					{#if launcherHintText}
+						<div
+							class="rounded-xl px-3 py-2 text-xs shadow-md border"
+							style="background: {theme.bg_color ?? '#0f172a'}; color: {theme.text_color ?? '#e2e8f0'}; border-color: color-mix(in srgb, {theme.text_color ?? '#e2e8f0'} 20%, transparent); font-family: {theme.font_family ?? 'inherit'};"
 						>
-							<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-								<path
-									d="M8 10h8M8 14h5M12 3C7.03 3 3 6.58 3 11c0 2.02.84 3.87 2.23 5.29L5 21l4.08-1.91c.92.25 1.9.38 2.92.38 4.97 0 9-3.58 9-8s-4.03-8.47-9-8.47z"
-									stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-								/>
-							</svg>
-						</button>
-					</div>
+							{launcherHintText}
+						</div>
+					{/if}
+					<button
+						aria-label="Launcher preview"
+						class="inline-flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg shrink-0"
+						style="background: {theme.primary_color ?? '#6366f1'};"
+					>
+						<svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+							<path
+								d="M8 10h8M8 14h5M12 3C7.03 3 3 6.58 3 11c0 2.02.84 3.87 2.23 5.29L5 21l4.08-1.91c.92.25 1.9.38 2.92.38 4.97 0 9-3.58 9-8s-4.03-8.47-9-8.47z"
+								stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+							/>
+						</svg>
+					</button>
 				</div>
 			</div>
 		</div>

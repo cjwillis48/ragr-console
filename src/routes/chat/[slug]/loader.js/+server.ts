@@ -24,8 +24,16 @@ import { env } from '$env/dynamic/public';
 // unset (local dev), we serve the unversioned /widget/ragr-chat.js.
 const WIDGET_SHA = env.PUBLIC_WIDGET_SHA || '';
 
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
 export const GET: RequestHandler = ({ params, url }) => {
 	const slug = params.slug;
+	if (!SLUG_RE.test(slug)) {
+		return new Response('// invalid slug\n', {
+			status: 400,
+			headers: { 'Content-Type': 'application/javascript; charset=utf-8' }
+		});
+	}
 	const origin = url.origin;
 	const bundleUrl = WIDGET_SHA
 		? `${origin}/widget/ragr-chat.${WIDGET_SHA}.js`

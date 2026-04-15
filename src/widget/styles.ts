@@ -165,7 +165,7 @@ svg { display: block; }
 	background: var(--ragr-bg);
 	color: var(--ragr-text);
 	border: 1px solid var(--ragr-border);
-	border-radius: calc(var(--ragr-radius) + 4px);
+	border-radius: max(8px, calc(var(--ragr-radius) + 4px));
 	overflow: hidden;
 	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 	transform-origin: bottom right;
@@ -301,7 +301,7 @@ svg { display: block; }
 	padding: 0.5rem 0.75rem;
 	font-size: 13.5px;
 	line-height: 1.5;
-	border-radius: var(--ragr-radius);
+	border-radius: min(var(--ragr-radius), 16px);
 	/* break-word only wraps long single tokens (URLs, code spans) when they
 	   wouldn't otherwise fit. overflow-wrap:anywhere is too aggressive — it
 	   can orphan trailing punctuation (e.g. a period) onto a new line after
@@ -452,7 +452,7 @@ svg { display: block; }
 }
 .ragr-suggestion {
 	padding: 0.25rem 0.625rem;
-	border-radius: 8px;
+	border-radius: min(var(--ragr-radius), 16px);
 	font-size: 11px;
 	line-height: 1.3;
 	background: var(--ragr-soft-fill);

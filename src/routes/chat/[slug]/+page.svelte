@@ -48,6 +48,9 @@
 		width: 100vw;
 		height: 100dvh;
 		background: #0f172a;
+		display: flex;
+		justify-content: center;
+		padding-inline: 1rem;
 	}
 	.loading {
 		display: flex;
@@ -61,6 +64,12 @@
 	ragr-chat {
 		display: block;
 		width: 100%;
+		max-width: 768px;
 		height: 100%;
+		animation: ragr-fadein 200ms ease;
+	}
+	@keyframes ragr-fadein {
+		from { opacity: 0; }
+		to   { opacity: 1; }
 	}
 </style>
