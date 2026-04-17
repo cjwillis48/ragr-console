@@ -41,6 +41,7 @@ export function App(props: AppProps): ComponentChildren {
 	const [showHint, setShowHint] = useState<boolean>(false);
 	const [size, setSize] = useState<'normal' | 'large'>('normal');
 	const [inputValue, setInputValue] = useState<string>('');
+	const [focusTrigger, setFocusTrigger] = useState(0);
 
 	// Resolve the effective theme with admin-preview overrides merged on top.
 	const effectiveTheme: WidgetTheme = useMemo(() => {
@@ -153,12 +154,16 @@ export function App(props: AppProps): ComponentChildren {
 		if (!question) return;
 		setInputValue('');
 		void chat.send(question);
+		// Bump trigger so Input refocuses the textarea — keeps the mobile
+		// keyboard open between messages instead of dismissing it on send.
+		setFocusTrigger((n) => n + 1);
 	}, [inputValue, chat]);
 
 	const handleSuggestion = useCallback(
 		(text: string) => {
 			if (chat.isSending) return;
 			void chat.send(text);
+			setFocusTrigger((n) => n + 1);
 		},
 		[chat]
 	);
@@ -208,6 +213,7 @@ export function App(props: AppProps): ComponentChildren {
 				error=${chat.error}
 				size=${size}
 				inline=${true}
+				focusTrigger=${focusTrigger}
 				onInput=${setInputValue}
 				onSubmit=${handleSubmit}
 				onSuggestion=${handleSuggestion}

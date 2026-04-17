@@ -79,14 +79,20 @@ export class RagrChatElement extends HTMLElement {
 	#startVisualViewportTracking() {
 		const vv = typeof window !== 'undefined' ? window.visualViewport : null;
 		if (!vv) return;
+		// Track last-set values to avoid redundant style updates. Android
+		// Firefox fires visualViewport resize/scroll on every keystroke
+		// (autocomplete bar, text prediction) — without dedup, each event
+		// triggers a CSS relayout that causes visible panel flicker.
+		let lastH = 0;
+		let lastT = 0;
 		const update = () => {
-			this.style.setProperty('--ragr-vvh', `${vv.height}px`);
-			// iOS Safari positions fixed elements relative to the *layout*
-			// viewport, not the visual viewport. When the keyboard opens,
-			// the layout viewport scrolls but fixed elements don't follow.
-			// offsetTop tells us the gap between the two — applying it as
-			// the panel's `top` keeps it pinned to what the user sees.
-			this.style.setProperty('--ragr-vvt', `${vv.offsetTop}px`);
+			const h = Math.round(vv.height);
+			const t = Math.round(vv.offsetTop);
+			if (h === lastH && t === lastT) return;
+			lastH = h;
+			lastT = t;
+			this.style.setProperty('--ragr-vvh', `${h}px`);
+			this.style.setProperty('--ragr-vvt', `${t}px`);
 		};
 		vv.addEventListener('resize', update);
 		vv.addEventListener('scroll', update);

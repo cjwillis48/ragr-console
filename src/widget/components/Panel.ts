@@ -17,7 +17,7 @@
 // hosted chat or admin preview pane) controls the dimensions.
 import { html } from 'htm/preact';
 import type { ComponentChildren } from 'preact';
-import type { Message, ModelInfo, WidgetTheme } from '../../lib/types';
+import type { Message, ModelInfo, WidgetTheme } from '$lib/types';
 import { MessageList } from './MessageList';
 import { Input } from './Input';
 
@@ -32,6 +32,7 @@ export interface PanelProps {
 	error: string | null;
 	size: 'normal' | 'large';
 	inline: boolean;
+	focusTrigger: number;
 	onInput: (value: string) => void;
 	onSubmit: () => void;
 	onSuggestion: (text: string) => void;
@@ -123,6 +124,7 @@ export function Panel(props: PanelProps): ComponentChildren {
 				sending=${props.isSending}
 				disabled=${!!unavailable || props.isSending}
 				autoFocus=${true}
+				focusTrigger=${props.focusTrigger}
 				onInput=${props.onInput}
 				onSubmit=${props.onSubmit}
 			/>

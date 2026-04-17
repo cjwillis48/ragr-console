@@ -18,6 +18,10 @@ export interface InputProps {
 	disabled: boolean;
 	sending: boolean;
 	autoFocus: boolean;
+	// Increment this to re-trigger focus (e.g., after send or suggestion tap).
+	// The keyboard stays open because the textarea never loses focus for more
+	// than one frame.
+	focusTrigger: number;
 	onInput: (value: string) => void;
 	onSubmit: () => void;
 }
@@ -27,14 +31,16 @@ export function Input(props: InputProps): ComponentChildren {
 
 	useEffect(() => {
 		if (props.autoFocus && ref.current) {
-			// Defer to next frame so the focus happens after the panel open
-			// transition has settled, avoiding iOS keyboard jank.
-			// preventScroll: true stops mobile browsers from scrolling the
-			// parent page to "bring the textarea into view" — the textarea is
-			// already visible inside the fixed-position panel.
 			requestAnimationFrame(() => ref.current?.focus({ preventScroll: true }));
 		}
 	}, [props.autoFocus]);
+
+	// Re-focus when focusTrigger changes (after send or suggestion tap).
+	useEffect(() => {
+		if (props.focusTrigger > 0 && ref.current) {
+			requestAnimationFrame(() => ref.current?.focus({ preventScroll: true }));
+		}
+	}, [props.focusTrigger]);
 
 	const handleKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Enter' && !e.shiftKey) {
