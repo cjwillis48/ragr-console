@@ -202,13 +202,14 @@ svg { display: block; }
 	:host(:not([inline])) .ragr-panel,
 	:host(:not([inline])) .ragr-panel[data-size="large"] {
 		position: fixed;
-		top: 0;
+		/* --ragr-vvt: offset from layout viewport top to visual viewport
+		   top. On Chrome/Firefox this is 0. On iOS Safari, when the
+		   keyboard opens, the layout viewport scrolls but fixed elements
+		   stay put — offsetTop tells us the gap so we can follow. */
+		top: var(--ragr-vvt, 0px);
 		left: 0;
 		width: 100vw;
-		/* --ragr-vvh is set by element.ts from the visualViewport API.
-		   It tracks the VISIBLE viewport height — excluding the virtual
-		   keyboard. Falls back to 100dvh when visualViewport is not
-		   available (desktop, or very old mobile browsers). */
+		/* --ragr-vvh: visible viewport height excluding the keyboard. */
 		height: var(--ragr-vvh, 100dvh);
 		max-width: none;
 		max-height: none;

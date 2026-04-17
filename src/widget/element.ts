@@ -81,6 +81,12 @@ export class RagrChatElement extends HTMLElement {
 		if (!vv) return;
 		const update = () => {
 			this.style.setProperty('--ragr-vvh', `${vv.height}px`);
+			// iOS Safari positions fixed elements relative to the *layout*
+			// viewport, not the visual viewport. When the keyboard opens,
+			// the layout viewport scrolls but fixed elements don't follow.
+			// offsetTop tells us the gap between the two — applying it as
+			// the panel's `top` keeps it pinned to what the user sees.
+			this.style.setProperty('--ragr-vvt', `${vv.offsetTop}px`);
 		};
 		vv.addEventListener('resize', update);
 		vv.addEventListener('scroll', update);

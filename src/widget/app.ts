@@ -115,19 +115,25 @@ export function App(props: AppProps): ComponentChildren {
 		// Only lock on mobile-width viewports where the panel goes fullscreen.
 		if (window.innerWidth > 640) return;
 		const scrollY = window.scrollY;
+		const html = document.documentElement;
 		const body = document.body;
 		const saved = {
-			overflow: body.style.overflow,
+			htmlOverflow: html.style.overflow,
+			bodyOverflow: body.style.overflow,
 			position: body.style.position,
 			width: body.style.width,
 			top: body.style.top
 		};
+		// Lock both <html> AND <body> — iOS Safari ignores overflow:hidden
+		// on body alone and still allows rubber-band scrolling.
+		html.style.overflow = 'hidden';
 		body.style.overflow = 'hidden';
 		body.style.position = 'fixed';
 		body.style.width = '100%';
 		body.style.top = `-${scrollY}px`;
 		return () => {
-			body.style.overflow = saved.overflow;
+			html.style.overflow = saved.htmlOverflow;
+			body.style.overflow = saved.bodyOverflow;
 			body.style.position = saved.position;
 			body.style.width = saved.width;
 			body.style.top = saved.top;
