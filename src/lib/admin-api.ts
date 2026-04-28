@@ -132,8 +132,8 @@ export async function crawlSite(slug: string, url: string, maxPages = 50, maxDep
 }
 
 // Sources
-export async function getSources(slug: string): Promise<SourceListResponse> {
-	const res = await authedFetch(`/models/${slug}/sources`);
+export async function getSources(slug: string, limit = 50, offset = 0): Promise<SourceListResponse> {
+	const res = await authedFetch(`/models/${slug}/sources?limit=${limit}&offset=${offset}`);
 	return res.json();
 }
 

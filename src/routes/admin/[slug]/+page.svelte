@@ -68,6 +68,9 @@
 	let conversationMessages = $state<MessageResponse[]>([]);
 	let loadingMessages = $state(false);
 	let sources = $state<SourceResponse[]>([]);
+	let sourcesTotal = $state(0);
+	let sourcesOffset = $state(0);
+	const SOURCES_PER_PAGE = 50;
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
 	let saveSuccess = $state(false);
@@ -203,8 +206,9 @@
 		let lastTotal = 0;
 		sourcePollTimer = setInterval(async () => {
 			try {
-				const res = await getSources(slug);
+				const res = await getSources(slug, SOURCES_PER_PAGE, sourcesOffset);
 				sources = res.sources;
+				sourcesTotal = res.total;
 				const allDone = sources.every((s) => s.status === 'complete' || s.status === 'error');
 				if (allDone && !keepAlive) {
 					stopSourcePolling();
@@ -263,8 +267,10 @@
 				conversations = res.conversations;
 				conversationsTotal = res.total;
 			} else if (tab === 'sources') {
-				const res = await getSources(slug);
+				sourcesOffset = 0;
+				const res = await getSources(slug, SOURCES_PER_PAGE, 0);
 				sources = res.sources;
+				sourcesTotal = res.total;
 			} else if (tab === 'api-keys') {
 				apiKeys = await listApiKeys(slug);
 				newlyCreatedKey = null;
@@ -616,6 +622,17 @@
 			addToast(e instanceof Error ? e.message : 'Upload failed', 'error');
 		} finally {
 			addingSource = false;
+		}
+	}
+
+	async function loadSourcesPage(offset: number) {
+		try {
+			const res = await getSources(slug, SOURCES_PER_PAGE, offset);
+			sources = res.sources;
+			sourcesTotal = res.total;
+			sourcesOffset = offset;
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Failed to load sources', 'error');
 		}
 	}
 
@@ -1410,7 +1427,12 @@
 			<!-- Source list -->
 			{#if sources.length > 0}
 				<div class="flex items-center justify-between">
-					<h3 class="text-sm font-medium text-text-muted">{sources.length} source(s)</h3>
+					<h3 class="text-sm font-medium text-text-muted">
+						{sourcesTotal} source{sourcesTotal !== 1 ? 's' : ''}
+						{#if sourcesTotal > SOURCES_PER_PAGE}
+							<span class="text-text-muted/60">&middot; page {Math.floor(sourcesOffset / SOURCES_PER_PAGE) + 1} of {Math.ceil(sourcesTotal / SOURCES_PER_PAGE)}</span>
+						{/if}
+					</h3>
 					<button onclick={handlePurge} class="text-xs text-error hover:underline">Purge All</button>
 				</div>
 				<div class="space-y-2">
@@ -1428,7 +1450,13 @@
 									{:else}
 										{source.chunk_count} chunks
 									{/if}
-									&middot; {source.status}
+									&middot;
+									<span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium {
+										source.status === 'complete' ? 'bg-emerald-500/15 text-emerald-400' :
+										source.status === 'error' || source.status === 'failed' ? 'bg-rose-500/15 text-rose-300' :
+										source.status === 'crawling' || source.status === 'processing' ? 'bg-indigo-500/15 text-indigo-400' :
+										'bg-slate-500/15 text-slate-400'
+									}">{source.status}</span>
 									{#if source.source_url}
 										&middot; <a href={source.source_url} target="_blank" class="text-accent hover:underline">{source.source_url}</a>
 									{/if}
@@ -1459,6 +1487,27 @@
 						{/if}
 					{/each}
 				</div>
+				{#if sourcesTotal > SOURCES_PER_PAGE}
+					<div class="flex items-center justify-between pt-2">
+						<button
+							onclick={() => loadSourcesPage(sourcesOffset - SOURCES_PER_PAGE)}
+							disabled={sourcesOffset === 0}
+							class="text-sm text-accent hover:underline disabled:text-text-muted disabled:no-underline disabled:cursor-not-allowed"
+						>
+							&larr; Previous
+						</button>
+						<span class="text-xs text-text-muted">
+							{sourcesOffset + 1}–{Math.min(sourcesOffset + SOURCES_PER_PAGE, sourcesTotal)} of {sourcesTotal}
+						</span>
+						<button
+							onclick={() => loadSourcesPage(sourcesOffset + SOURCES_PER_PAGE)}
+							disabled={sourcesOffset + SOURCES_PER_PAGE >= sourcesTotal}
+							class="text-sm text-accent hover:underline disabled:text-text-muted disabled:no-underline disabled:cursor-not-allowed"
+						>
+							Next &rarr;
+						</button>
+					</div>
+				{/if}
 			{:else}
 				<div class="border border-dashed border-border rounded-lg p-8 text-center">
 					<p class="text-text-muted text-sm">No sources yet</p>
