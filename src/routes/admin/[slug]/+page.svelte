@@ -776,11 +776,11 @@
 	</div>
 
 	<!-- Tabs -->
-	<div class="flex gap-1 border-b border-border mb-4">
+	<div class="flex gap-1 border-b border-border mb-4 overflow-x-auto" style="-ms-overflow-style:none;scrollbar-width:none;">
 		{#each tabs as tab}
 			<button
 				onclick={() => loadTab(tab.key)}
-				class="px-4 py-2 text-sm font-medium border-b-2 transition-colors {activeTab === tab.key
+				class="px-3 sm:px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 {activeTab === tab.key
 					? 'border-accent text-accent'
 					: 'border-transparent text-text-muted hover:text-text'}"
 			>
@@ -800,7 +800,7 @@
 			<!-- Behavior -->
 			<section class="rounded-xl border border-border bg-surface-alt/30 p-5 space-y-4">
 				<h3 class="text-sm font-semibold text-text uppercase tracking-wider">Behavior</h3>
-				<div class="grid grid-cols-2 gap-4">
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<label class="block">
 						<span class="text-sm text-text-muted">Name</span>
 						<input bind:value={model.name} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
@@ -944,7 +944,7 @@
 				<!-- Chunking -->
 				<div class="space-y-3">
 					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Chunking</h4>
-					<div class="grid grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<label class="block">
 							<span class="inline-flex items-center gap-1">
 							<span class="text-sm text-text-muted">Chunk Size</span>
@@ -965,7 +965,7 @@
 				<!-- Search -->
 				<div class="space-y-3">
 					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Search</h4>
-					<div class="grid grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<label class="block">
 							<span class="inline-flex items-center gap-1">
 							<span class="text-sm text-text-muted">Similarity Threshold</span>
@@ -1006,7 +1006,7 @@
 						<span class="text-sm text-text-muted">Enable Reranker</span>
 					</label>
 					{#if model.reranker_enabled}
-						<div class="grid grid-cols-3 gap-4">
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 							<label class="block">
 								<span class="text-sm text-text-muted">Rerank Model</span>
 								<input bind:value={model.rerank_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent" />
@@ -1035,7 +1035,7 @@
 				<!-- Generation -->
 				<div class="space-y-3">
 					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Generation</h4>
-					<div class="grid grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<label class="block">
 							<span class="text-sm text-text-muted">Generation Model</span>
 							<select bind:value={model.generation_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent">
@@ -1065,7 +1065,7 @@
 				<!-- API Keys -->
 				<div class="space-y-3">
 					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">API Keys</h4>
-					<div class="grid grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<label class="block">
 							<span class="flex items-center gap-2">
 								<span class="text-sm text-text-muted">Anthropic API Key</span>
@@ -1165,7 +1165,7 @@
 			<!-- Theme Form -->
 			<form onsubmit={(e) => { e.preventDefault(); handleSaveTheme(); }} class="space-y-3">
 				<fieldset class="space-y-2">
-					<div class="grid grid-cols-2 gap-3">
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 						<label class="block">
 							<span class="text-sm text-text-muted">Label</span>
 							<input bind:value={theme.label} placeholder="Your assistant tagline" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
@@ -1193,7 +1193,7 @@
 
 				<fieldset class="space-y-2">
 					<legend class="text-sm font-medium text-text-muted mb-1">Colors</legend>
-					<div class="grid grid-cols-2 gap-3">
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 						{#each [
 							['Primary', 'primary_color', '#6366f1'],
 							['Background', 'bg_color', '#0f172a'],
@@ -1225,7 +1225,7 @@
 
 				<fieldset class="space-y-2">
 					<legend class="text-sm font-medium text-text-muted mb-1">Style</legend>
-					<div class="grid grid-cols-2 gap-3">
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 						<div class="block">
 							<span class="text-sm text-text-muted">Font Family</span>
 							<div class="relative mt-1 font-dropdown-wrapper">
@@ -1458,7 +1458,7 @@
 										'bg-slate-500/15 text-slate-400'
 									}">{source.status}</span>
 									{#if source.source_url}
-										&middot; <a href={source.source_url} target="_blank" class="text-accent hover:underline">{source.source_url}</a>
+										&middot; <a href={source.source_url} target="_blank" class="text-accent hover:underline break-all">{source.source_url}</a>
 									{/if}
 								</div>
 							</div>
@@ -1536,9 +1536,9 @@
 								<span class="text-sm font-medium">{conv.title || 'Untitled'}</span>
 								<span class="text-xs px-2 py-0.5 rounded bg-surface border border-border text-text-muted">{conv.message_count} msg{conv.message_count !== 1 ? 's' : ''}</span>
 							</div>
-							<div class="flex items-center gap-3">
-								<span class="text-xs text-text-muted font-mono">{conv.session_id.slice(0, 8)}...</span>
-								<span class="text-xs text-text-muted">{new Date(conv.updated_at).toLocaleString()}</span>
+							<div class="flex items-center gap-2 sm:gap-3 shrink-0">
+								<span class="hidden sm:inline text-xs text-text-muted font-mono">{conv.session_id.slice(0, 8)}...</span>
+								<span class="hidden sm:inline text-xs text-text-muted">{new Date(conv.updated_at).toLocaleString()}</span>
 								<button
 									type="button"
 									onclick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id); }}

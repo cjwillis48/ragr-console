@@ -16,7 +16,7 @@
 	let ready = $derived(ctx.isLoaded);
 </script>
 
-<div class="min-h-dvh bg-surface text-text">
+<div class="min-h-dvh bg-surface text-text overflow-x-hidden">
 	<header class="border-b border-border px-4 py-3">
 		<div class="max-w-5xl mx-auto flex items-center justify-between">
 			<a href="/admin" class="text-lg font-semibold hover:text-accent transition-colors">RAGr Admin</a>
