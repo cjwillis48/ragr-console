@@ -70,6 +70,8 @@
 	let sources = $state<SourceResponse[]>([]);
 	let sourcesTotal = $state(0);
 	let sourcesOffset = $state(0);
+	let sourcesSearch = $state('');
+	let sourcesSearchTimer: ReturnType<typeof setTimeout> | undefined;
 	const SOURCES_PER_PAGE = 50;
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
@@ -206,7 +208,7 @@
 		let lastTotal = 0;
 		sourcePollTimer = setInterval(async () => {
 			try {
-				const res = await getSources(slug, SOURCES_PER_PAGE, sourcesOffset);
+				const res = await getSources(slug, SOURCES_PER_PAGE, sourcesOffset, sourcesSearch);
 				sources = res.sources;
 				sourcesTotal = res.total;
 				const allDone = sources.every((s) => s.status === 'complete' || s.status === 'error');
@@ -268,6 +270,7 @@
 				conversationsTotal = res.total;
 			} else if (tab === 'sources') {
 				sourcesOffset = 0;
+				sourcesSearch = '';
 				const res = await getSources(slug, SOURCES_PER_PAGE, 0);
 				sources = res.sources;
 				sourcesTotal = res.total;
@@ -625,15 +628,22 @@
 		}
 	}
 
-	async function loadSourcesPage(offset: number) {
+	async function loadSourcesPage(offset: number, search?: string) {
 		try {
-			const res = await getSources(slug, SOURCES_PER_PAGE, offset);
+			const q = search ?? sourcesSearch;
+			const res = await getSources(slug, SOURCES_PER_PAGE, offset, q);
 			sources = res.sources;
 			sourcesTotal = res.total;
 			sourcesOffset = offset;
 		} catch (e: unknown) {
 			addToast(e instanceof Error ? e.message : 'Failed to load sources', 'error');
 		}
+	}
+
+	function handleSourcesSearch(value: string) {
+		sourcesSearch = value;
+		clearTimeout(sourcesSearchTimer);
+		sourcesSearchTimer = setTimeout(() => loadSourcesPage(0), 250);
 	}
 
 	async function handleDeleteSource(id: number) {
@@ -1425,10 +1435,25 @@
 			</div>
 
 			<!-- Source list -->
+			<div class="flex items-center gap-3">
+				<input
+					type="text"
+					value={sourcesSearch}
+					oninput={(e) => handleSourcesSearch(e.currentTarget.value)}
+					placeholder="Search sources..."
+					class="flex-1 rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+				/>
+				{#if sourcesSearch}
+					<button
+						onclick={() => handleSourcesSearch('')}
+						class="text-xs text-text-muted hover:text-text"
+					>&times; Clear</button>
+				{/if}
+			</div>
 			{#if sources.length > 0}
 				<div class="flex items-center justify-between">
 					<h3 class="text-sm font-medium text-text-muted">
-						{sourcesTotal} source{sourcesTotal !== 1 ? 's' : ''}
+						{sourcesTotal} source{sourcesTotal !== 1 ? 's' : ''}{sourcesSearch ? ` matching "${sourcesSearch}"` : ''}
 						{#if sourcesTotal > SOURCES_PER_PAGE}
 							<span class="text-text-muted/60">&middot; page {Math.floor(sourcesOffset / SOURCES_PER_PAGE) + 1} of {Math.ceil(sourcesTotal / SOURCES_PER_PAGE)}</span>
 						{/if}
