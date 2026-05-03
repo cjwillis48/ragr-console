@@ -195,12 +195,17 @@
 	let creatingKey = $state(false);
 	let newlyCreatedKey = $state<ApiKeyCreateResponse | null>(null);
 	let keyCopied = $state(false);
+	let pendingRevokeKeyId = $state<string | null>(null);
+	let revokeTimer: ReturnType<typeof setTimeout> | null = null;
 
 	onMount(() => {
 		loadModel().then(() => {
 			if (activeTab !== 'settings') loadTab(activeTab);
 		});
-		return () => stopSourcePolling();
+		return () => {
+			stopSourcePolling();
+			clearRevokeTimer();
+		};
 	});
 
 	function startSourcePolling(keepAlive = false) {
@@ -740,8 +745,26 @@
 		}
 	}
 
+	function clearRevokeTimer() {
+		if (revokeTimer) {
+			clearTimeout(revokeTimer);
+			revokeTimer = null;
+		}
+	}
+
 	async function handleRevokeKey(keyId: number) {
-		if (!confirm('Revoke this API key? This cannot be undone.')) return;
+		const id = String(keyId);
+		if (pendingRevokeKeyId !== id) {
+			pendingRevokeKeyId = id;
+			clearRevokeTimer();
+			revokeTimer = setTimeout(() => {
+				pendingRevokeKeyId = null;
+				revokeTimer = null;
+			}, 3000);
+			return;
+		}
+		clearRevokeTimer();
+		pendingRevokeKeyId = null;
 		try {
 			await revokeApiKey(slug, keyId);
 			apiKeys = await listApiKeys(slug);
@@ -762,7 +785,7 @@
 		{ key: 'widget', label: 'Widget' },
 		{ key: 'sources', label: 'Sources' },
 		{ key: 'conversations', label: 'Conversations' },
-		{ key: 'api-keys', label: 'API Keys' },
+		{ key: 'api-keys', label: 'RAGr API Keys' },
 		{ key: 'stats', label: 'Stats' }
 	];
 </script>
@@ -1096,13 +1119,25 @@
 
 				<!-- API Keys -->
 				<div class="space-y-3">
-					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">API Keys</h4>
+					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Provider Keys</h4>
+					<p class="text-xs text-text-muted">
+						RAGr uses your Anthropic key for chat completions and your Voyage key for embedding sources.
+						{#if currentUser.allowGlobalKeys}
+							Without these, this model falls back to RAGr's global keys.
+						{:else}
+							Without these, chat is disabled.
+						{/if}
+					</p>
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<label class="block">
 							<span class="flex items-center gap-2">
 								<span class="text-sm text-text-muted">Anthropic API Key</span>
 								{#if model.has_custom_anthropic_key}
 									<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">configured</span>
+								{:else if currentUser.allowGlobalKeys}
+									<span class="text-[10px] px-1.5 py-0.5 rounded bg-text-muted/10 text-text-muted">using global</span>
+								{:else}
+									<span class="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">not set</span>
 								{/if}
 							</span>
 							<input
@@ -1118,6 +1153,10 @@
 								<span class="text-sm text-text-muted">Voyage API Key</span>
 								{#if model.has_custom_voyage_key}
 									<span class="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">configured</span>
+								{:else if currentUser.allowGlobalKeys}
+									<span class="text-[10px] px-1.5 py-0.5 rounded bg-text-muted/10 text-text-muted">using global</span>
+								{:else}
+									<span class="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">not set</span>
 								{/if}
 							</span>
 							<input
@@ -1519,6 +1558,7 @@
 										<span class="text-xs text-text-muted">{chunksData.total} chunk(s)</span>
 										<button onclick={() => { chunksSourceId = null; chunksData = null; }} class="text-xs text-text-muted hover:text-text">&times; Close</button>
 									</div>
+									<p class="text-xs text-text-muted mb-3">Chunks are stored as raw text fragments. The chat model handles cleanup, formatting, and context when answering — messiness here is expected and doesn't affect answer quality.</p>
 									{#each chunksData.chunks as chunk, i}
 										<div class="bg-surface-alt border border-border rounded-lg p-3">
 											<div class="flex items-center justify-between mb-1">
@@ -1690,7 +1730,7 @@
 	{:else if activeTab === 'api-keys'}
 		<div class="space-y-6 max-w-2xl">
 			<div class="flex items-center gap-3">
-				<h3 class="text-sm font-medium text-text-muted">API Keys</h3>
+				<h3 class="text-sm font-medium text-text-muted">RAGr API Keys</h3>
 				<a
 					href="{env.PUBLIC_RAGR_API_URL}/docs"
 					target="_blank"
@@ -1701,15 +1741,13 @@
 				</a>
 			</div>
 
+			<p class="text-xs text-text-muted">
+				Use these keys to call this model's API from your own apps. Pass them in the <code>Authorization: Bearer &lt;key&gt;</code> header.
+			</p>
+
 			<!-- Scope info -->
 			<div class="bg-surface-alt border border-border rounded-lg p-4 text-xs text-text-muted space-y-2">
 				<p class="font-medium text-text">Per-model keys are scoped to <span class="font-mono text-accent">/{model.slug}</span> only.</p>
-				<div class="grid grid-cols-2 gap-x-6 gap-y-1">
-					<span>Chat, Sources, Conversations</span><span class="text-green-400">Allowed</span>
-					<span>Stats, Theme, Config</span><span class="text-green-400">Allowed</span>
-					<span>API Key management</span><span class="text-green-400">Allowed</span>
-					<span>Create/list/delete models</span><span class="text-red-400">Admin only</span>
-				</div>
 				<p>A key for this model cannot access other models. Using it on a different slug returns <span class="font-mono">401</span>.</p>
 			</div>
 
@@ -1737,8 +1775,14 @@
 				<div class="bg-green-500/10 border border-green-500/30 rounded-lg p-4 space-y-2">
 					<div class="flex items-center justify-between">
 						<span class="text-sm font-medium text-green-400">Key created: {newlyCreatedKey.label}</span>
-						<button onclick={() => (newlyCreatedKey = null)} class="text-xs text-text-muted hover:text-text">&times;</button>
+						<button
+							onclick={() => (newlyCreatedKey = null)}
+							disabled={!keyCopied}
+							title={!keyCopied ? 'Copy the key first.' : ''}
+							class="text-xs text-text-muted hover:text-text {!keyCopied ? 'opacity-40 cursor-not-allowed' : ''}"
+						>&times;</button>
 					</div>
+					<p class="text-xs text-yellow-400">This key will only be shown once. Save it now.</p>
 					<div class="flex items-center gap-2">
 						<code class="flex-1 bg-surface rounded-lg px-3 py-2 text-sm font-mono text-text break-all select-all">{newlyCreatedKey.raw_key}</code>
 						<button
@@ -1748,7 +1792,11 @@
 							{keyCopied ? 'Copied!' : 'Copy'}
 						</button>
 					</div>
-					<p class="text-xs text-yellow-400">This key will only be shown once. Save it now.</p>
+					<p class="text-xs text-text-muted">Try it:</p>
+					<pre class="bg-surface rounded-lg px-3 py-2 text-xs font-mono break-all select-all whitespace-pre-wrap"><code>curl -H "Authorization: Bearer {newlyCreatedKey.raw_key}" \
+  -H "Content-Type: application/json" \
+  -d '&lbrace;"message": "Hello"&rbrace;' \
+  {env.PUBLIC_RAGR_API_URL}/models/{model.slug}/chat</code></pre>
 				</div>
 			{/if}
 
@@ -1777,7 +1825,10 @@
 								</div>
 							</div>
 							{#if key.is_active}
-								<button onclick={() => handleRevokeKey(key.id)} class="text-sm text-text-muted hover:text-error ml-4 shrink-0">Revoke</button>
+								<button
+									onclick={() => handleRevokeKey(key.id)}
+									class="text-sm ml-4 shrink-0 {pendingRevokeKeyId === String(key.id) ? 'text-error' : 'text-text-muted hover:text-error'}"
+								>{pendingRevokeKeyId === String(key.id) ? 'Click to confirm' : 'Revoke'}</button>
 							{/if}
 						</div>
 					{/each}
