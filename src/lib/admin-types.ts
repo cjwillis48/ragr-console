@@ -38,6 +38,7 @@ export interface RagModel {
 	is_active: boolean;
 	has_custom_anthropic_key: boolean;
 	has_custom_voyage_key: boolean;
+	has_content: boolean;
 	created_at: string;
 	updated_at: string;
 }

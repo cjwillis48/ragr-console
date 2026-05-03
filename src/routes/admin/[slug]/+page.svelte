@@ -952,6 +952,14 @@
 			<section class="rounded-xl border border-border bg-surface-alt/30 p-5 space-y-5">
 				<h3 class="text-sm font-semibold text-text uppercase tracking-wider">Retrieval & Generation</h3>
 
+				{#if model.has_content}
+					<div class="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-muted">
+						Chunk size, chunk overlap, and embedding model are locked because this model already has ingested content.
+						Changing them would invalidate stored chunks and break references in past chats.
+						To re-chunk, delete all sources first.
+					</div>
+				{/if}
+
 				<!-- Chunking -->
 				<div class="space-y-3">
 					<h4 class="text-xs font-medium text-text-muted uppercase tracking-wide">Chunking</h4>
@@ -961,14 +969,14 @@
 							<span class="text-sm text-text-muted">Chunk Size</span>
 							<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Number of characters per text chunk when ingesting sources">?</span>
 						</span>
-							<input type="number" bind:value={model.chunk_size} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+							<input type="number" disabled={model.has_content} bind:value={model.chunk_size} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
 						</label>
 						<label class="block">
 							<span class="inline-flex items-center gap-1">
 							<span class="text-sm text-text-muted">Chunk Overlap</span>
 							<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Character overlap between adjacent chunks. Higher values improve context continuity but increase storage">?</span>
 						</span>
-							<input type="number" bind:value={model.chunk_overlap} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
+							<input type="number" disabled={model.has_content} bind:value={model.chunk_overlap} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
 						</label>
 					</div>
 				</div>
@@ -993,7 +1001,7 @@
 						</label>
 						<label class="block">
 							<span class="text-sm text-text-muted">Embedding Model</span>
-							<select bind:value={model.embedding_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent">
+							<select disabled={model.has_content} bind:value={model.embedding_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed">
 								<option value="voyage-4-lite">voyage-4-lite</option>
 								<option value="voyage-4">voyage-4</option>
 								<option value="voyage-3">voyage-3</option>
