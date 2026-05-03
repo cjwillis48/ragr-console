@@ -37,5 +37,9 @@
 			<div class="text-text-muted">Loading...</div>
 		{/if}
 	</main>
+	<footer class="max-w-5xl mx-auto px-4 py-6 border-t border-border flex items-center justify-between text-sm text-text-muted">
+		<span>Bug or feature request?</span>
+		<a href="mailto:contact@ragr.charliewillis.com" class="hover:text-accent transition-colors">contact@ragr.charliewillis.com</a>
+	</footer>
 </div>
 <Toast />
