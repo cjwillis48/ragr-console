@@ -93,9 +93,9 @@
 	<form onsubmit={(e) => { e.preventDefault(); handleCreate(); }} class="bg-surface-alt border border-border rounded-lg p-4 mb-6 space-y-3">
 		{#if requiresByok}
 			<div class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-				<div class="font-medium">Your account requires its own API keys.</div>
+				<div class="font-medium">An Anthropic and a Voyage API key are required.</div>
 				<div class="text-amber-200/80 mt-1">
-					New accounts must provide an Anthropic and a Voyage key. Get them at
+					Get them at
 					<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" class="underline hover:text-amber-100">console.anthropic.com</a>
 					and
 					<a href="https://dashboard.voyageai.com/api-keys" target="_blank" rel="noopener" class="underline hover:text-amber-100">dashboard.voyageai.com</a>.

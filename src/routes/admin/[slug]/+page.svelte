@@ -1081,27 +1081,17 @@
 			<section class="rounded-xl border border-border bg-surface-alt/30 p-5 space-y-5">
 				<h3 class="text-sm font-semibold text-text uppercase tracking-wider">Access & Billing</h3>
 
-				{#if currentUser.requiresByok}
-					{@const missingKey = !model.has_custom_anthropic_key || !model.has_custom_voyage_key}
-					{#if missingKey}
-						<div class="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm text-error">
-							<div class="font-medium">Chat is blocked for this model.</div>
-							<div class="text-error/80 mt-1">
-								Your account isn't approved to use the platform's API keys, and this model is missing
-								{!model.has_custom_anthropic_key && !model.has_custom_voyage_key
-									? 'both an Anthropic and a Voyage key'
-									: !model.has_custom_anthropic_key ? 'an Anthropic key' : 'a Voyage key'}.
-								Add the missing key{!model.has_custom_anthropic_key && !model.has_custom_voyage_key ? 's' : ''} below to unblock chat.
-							</div>
+				{#if currentUser.requiresByok && (!model.has_custom_anthropic_key || !model.has_custom_voyage_key)}
+					<div class="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm text-error">
+						<div class="font-medium">Chat is blocked for this model.</div>
+						<div class="text-error/80 mt-1">
+							This model is missing
+							{!model.has_custom_anthropic_key && !model.has_custom_voyage_key
+								? 'both an Anthropic and a Voyage key'
+								: !model.has_custom_anthropic_key ? 'an Anthropic key' : 'a Voyage key'}.
+							Add the missing key{!model.has_custom_anthropic_key && !model.has_custom_voyage_key ? 's' : ''} below to unblock chat.
 						</div>
-					{:else}
-						<div class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-							<div class="font-medium">This model uses your own API keys.</div>
-							<div class="text-amber-200/80 mt-1">
-								Your account isn't approved to use the platform's keys, so don't clear these — chat will stop working until they're replaced.
-							</div>
-						</div>
-					{/if}
+					</div>
 				{/if}
 
 				<!-- API Keys -->
@@ -1153,7 +1143,6 @@
 						<span class="text-sm text-text-muted">Budget Limit ($)</span>
 						<input type="number" step="0.01" bind:value={model.budget_limit} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent" />
 					</label>
-					<p class="text-xs text-text-muted">Hard capped at $10 unless custom API keys are provided.</p>
 				</div>
 
 				<!-- Access -->
