@@ -128,7 +128,7 @@
 		<details open={requiresByok} class="group">
 			<summary class="cursor-pointer text-sm text-text-muted select-none flex items-center gap-2">
 				<span class="group-open:rotate-90 transition-transform inline-block">›</span>
-				API keys {requiresByok ? '(required)' : '(optional — uses platform keys if blank)'}
+				API keys {requiresByok ? '(required)' : '(optional)'}
 			</summary>
 			<div class="mt-3 space-y-3">
 				<div>
