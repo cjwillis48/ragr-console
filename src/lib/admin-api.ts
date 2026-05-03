@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, DailyStatsEntry, TopSourceEntry, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry } from './admin-types';
+import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, DailyStatsEntry, TopSourceEntry, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry, CurrentUser } from './admin-types';
 
 const baseUrl = () => env.PUBLIC_RAGR_API_URL;
 
@@ -26,7 +26,7 @@ async function authedFetch(path: string, options: RequestInit = {}): Promise<Res
 			...options.headers
 		}
 	});
-	if (res.status === 401 || res.status === 403) {
+	if (res.status === 401) {
 		throw new Error('Unauthorized — please sign in again');
 	}
 	if (!res.ok) {
@@ -48,6 +48,12 @@ async function authedFetch(path: string, options: RequestInit = {}): Promise<Res
 		throw new Error(detail || `${res.status}: ${body}`);
 	}
 	return res;
+}
+
+// Current user
+export async function getCurrentUser(): Promise<CurrentUser> {
+	const res = await authedFetch('/users/me');
+	return res.json();
 }
 
 // Models

@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { listModels, createModel, deleteModel } from '$lib/admin-api';
-	import type { RagModel } from '$lib/admin-types';
+	import { currentUser } from '$lib/current-user.svelte';
+	import type { RagModel, RagModelCreate } from '$lib/admin-types';
 
 	let models = $state<RagModel[]>([]);
 	let loading = $state(true);
@@ -10,7 +11,15 @@
 	let showCreate = $state(false);
 	let newName = $state('');
 	let newSlug = $state('');
+	let newAnthropicKey = $state('');
+	let newVoyageKey = $state('');
 	let creating = $state(false);
+
+	let requiresByok = $derived(currentUser.requiresByok);
+	let byokComplete = $derived(newAnthropicKey.trim().length > 0 && newVoyageKey.trim().length > 0);
+	let canSubmit = $derived(
+		newName.trim().length > 0 && newSlug.trim().length > 0 && (!requiresByok || byokComplete)
+	);
 
 	onMount(() => load());
 
@@ -27,13 +36,18 @@
 	}
 
 	async function handleCreate() {
-		if (!newName.trim() || !newSlug.trim()) return;
+		if (!canSubmit) return;
 		creating = true;
 		try {
-			await createModel({ name: newName.trim(), slug: newSlug.trim() });
+			const body: RagModelCreate = { name: newName.trim(), slug: newSlug.trim() };
+			if (newAnthropicKey.trim()) body.custom_anthropic_key = newAnthropicKey.trim();
+			if (newVoyageKey.trim()) body.custom_voyage_key = newVoyageKey.trim();
+			await createModel(body);
 			showCreate = false;
 			newName = '';
 			newSlug = '';
+			newAnthropicKey = '';
+			newVoyageKey = '';
 			await load();
 		} catch (e: unknown) {
 			error = e instanceof Error ? e.message : 'Failed to create model';
@@ -77,6 +91,18 @@
 
 {#if showCreate}
 	<form onsubmit={(e) => { e.preventDefault(); handleCreate(); }} class="bg-surface-alt border border-border rounded-lg p-4 mb-6 space-y-3">
+		{#if requiresByok}
+			<div class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+				<div class="font-medium">Your account requires its own API keys.</div>
+				<div class="text-amber-200/80 mt-1">
+					New accounts must provide an Anthropic and a Voyage key. Get them at
+					<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" class="underline hover:text-amber-100">console.anthropic.com</a>
+					and
+					<a href="https://dashboard.voyageai.com/api-keys" target="_blank" rel="noopener" class="underline hover:text-amber-100">dashboard.voyageai.com</a>.
+					Keys are encrypted at rest.
+				</div>
+			</div>
+		{/if}
 		<div>
 			<label for="name" class="block text-sm text-text-muted mb-1">Name</label>
 			<input
@@ -98,9 +124,47 @@
 					placeholder:text-text-muted focus:outline-none focus:border-accent"
 			/>
 		</div>
+
+		<details open={requiresByok} class="group">
+			<summary class="cursor-pointer text-sm text-text-muted select-none flex items-center gap-2">
+				<span class="group-open:rotate-90 transition-transform inline-block">›</span>
+				API keys {requiresByok ? '(required)' : '(optional — uses platform keys if blank)'}
+			</summary>
+			<div class="mt-3 space-y-3">
+				<div>
+					<label for="anthropic_key" class="block text-sm text-text-muted mb-1">
+						Anthropic API key{requiresByok ? ' *' : ''}
+					</label>
+					<input
+						id="anthropic_key"
+						type="password"
+						bind:value={newAnthropicKey}
+						placeholder="sk-ant-..."
+						autocomplete="off"
+						class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-text font-mono text-sm
+							placeholder:text-text-muted focus:outline-none focus:border-accent"
+					/>
+				</div>
+				<div>
+					<label for="voyage_key" class="block text-sm text-text-muted mb-1">
+						Voyage API key{requiresByok ? ' *' : ''}
+					</label>
+					<input
+						id="voyage_key"
+						type="password"
+						bind:value={newVoyageKey}
+						placeholder="pa-..."
+						autocomplete="off"
+						class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-text font-mono text-sm
+							placeholder:text-text-muted focus:outline-none focus:border-accent"
+					/>
+				</div>
+			</div>
+		</details>
+
 		<button
 			type="submit"
-			disabled={creating || !newName.trim() || !newSlug.trim()}
+			disabled={creating || !canSubmit}
 			class="rounded-lg bg-accent px-4 py-2 text-sm text-white font-medium hover:bg-accent/90
 				disabled:opacity-40 disabled:cursor-not-allowed"
 		>
@@ -114,18 +178,18 @@
 {:else if models.length === 0}
 	<div class="text-text-muted">No models yet. Create one to get started.</div>
 {:else}
-	<div class="grid gap-4">
+	<div class="grid grid-cols-1 gap-4">
 		{#each models as model}
 			<a
 				href="/admin/{model.slug}"
-				class="group relative block bg-surface-alt border border-border rounded-lg p-4 pr-32
-					hover:border-accent/40 transition-colors cursor-pointer no-underline text-inherit"
+				class="group relative block bg-surface-alt border border-border rounded-lg p-4 pr-36
+					hover:border-accent/40 transition-colors cursor-pointer no-underline text-inherit min-w-0"
 			>
-				<div class="flex items-center gap-3">
-					<h2 class="font-medium truncate">{model.name}</h2>
-					<span class="text-xs text-text-muted font-mono">/{model.slug}</span>
+				<div class="flex items-center gap-2 sm:gap-3 min-w-0">
+					<h2 class="font-medium truncate min-w-0">{model.name}</h2>
+					<span class="hidden sm:inline text-xs text-text-muted font-mono truncate">/{model.slug}</span>
 					{#if !model.is_active}
-						<span class="text-xs bg-error/20 text-error px-2 py-0.5 rounded">inactive</span>
+						<span class="text-xs bg-text-muted/10 text-text-muted px-2 py-0.5 rounded shrink-0">inactive</span>
 					{/if}
 				</div>
 				{#if model.description}
@@ -133,10 +197,10 @@
 				{/if}
 
 				<!-- Action icons — top-right, stop propagation so they don't trigger card navigation -->
-				<span class="absolute top-3 right-3 flex items-center gap-0.5">
+				<span class="absolute top-3 right-3 flex items-center gap-1">
 					<button
 						onclick={(e) => { e.preventDefault(); e.stopPropagation(); window.open('/chat/' + model.slug, '_blank'); }}
-						class="w-9 h-9 inline-flex items-center justify-center rounded-md
+						class="w-11 h-11 inline-flex items-center justify-center rounded-md
 							text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
 						aria-label="Chat with {model.name}"
 						title="Open chat"
@@ -147,7 +211,7 @@
 					</button>
 					<button
 						onclick={(e) => { e.preventDefault(); e.stopPropagation(); goto('/admin/' + model.slug); }}
-						class="w-9 h-9 inline-flex items-center justify-center rounded-md
+						class="w-11 h-11 inline-flex items-center justify-center rounded-md
 							text-text-muted hover:text-text hover:bg-white/5 transition-colors"
 						aria-label="Edit {model.name}"
 						title="Edit settings"
@@ -159,7 +223,7 @@
 					</button>
 					<button
 						onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(model.slug); }}
-						class="w-9 h-9 inline-flex items-center justify-center rounded-md
+						class="w-11 h-11 inline-flex items-center justify-center rounded-md
 							text-text-muted hover:text-error hover:bg-error/10 transition-colors"
 						aria-label="Delete {model.name}"
 						title="Delete"

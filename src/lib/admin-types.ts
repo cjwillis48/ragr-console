@@ -63,6 +63,8 @@ export interface RagModelCreate {
 	hosted_chat?: boolean | null;
 	history_turns?: number | null;
 	budget_limit?: number | null;
+	custom_anthropic_key?: string | null;
+	custom_voyage_key?: string | null;
 }
 
 export interface RagModelUpdate {
@@ -87,8 +89,16 @@ export interface RagModelUpdate {
 	history_turns?: number | null;
 	budget_limit?: number | null;
 	is_active?: boolean | null;
-	anthropic_api_key?: string | null;
-	voyage_api_key?: string | null;
+	custom_anthropic_key?: string | null;
+	custom_voyage_key?: string | null;
+}
+
+export interface CurrentUser {
+	user_id: string;
+	email: string | null;
+	first_name: string | null;
+	last_name: string | null;
+	allow_global_keys: boolean;
 }
 
 export interface StatsResponse {

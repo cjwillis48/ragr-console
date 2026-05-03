@@ -2,6 +2,7 @@
 	import { UserButton } from 'svelte-clerk';
 	import { useClerkContext } from 'svelte-clerk/client';
 	import { setTokenGetter } from '$lib/admin-api';
+	import { currentUser } from '$lib/current-user.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 
 	let { children } = $props();
@@ -14,6 +15,12 @@
 	setTokenGetter(() => ctx.clerk?.session?.getToken() ?? Promise.resolve(null));
 
 	let ready = $derived(ctx.isLoaded);
+
+	$effect(() => {
+		if (ready && !currentUser.loaded) {
+			currentUser.load();
+		}
+	});
 </script>
 
 <div class="min-h-dvh bg-surface text-text overflow-x-hidden">
