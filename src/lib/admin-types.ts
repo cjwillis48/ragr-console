@@ -10,7 +10,7 @@ export interface WidgetTheme {
 	bot_bubble_color?: string | null;
 	font_family?: string | null;
 	border_radius?: number | null;
-	show_sample_questions_in_greeting?: boolean | null;
+	show_sample_messages_in_greeting?: boolean | null;
 }
 
 export interface RagModel {
@@ -30,7 +30,7 @@ export interface RagModel {
 	rerank_candidates: number;
 	rerank_threshold: number;
 	keyword_search_enabled: boolean;
-	sample_questions: string[];
+	sample_messages: string[];
 	allowed_origins: string[];
 	hosted_chat: boolean;
 	history_turns: number;
@@ -59,7 +59,7 @@ export interface RagModelCreate {
 	rerank_candidates?: number | null;
 	rerank_threshold?: number | null;
 	keyword_search_enabled?: boolean | null;
-	sample_questions?: string[] | null;
+	sample_messages?: string[] | null;
 	allowed_origins?: string[] | null;
 	hosted_chat?: boolean | null;
 	history_turns?: number | null;
@@ -84,7 +84,7 @@ export interface RagModelUpdate {
 	rerank_candidates?: number | null;
 	rerank_threshold?: number | null;
 	keyword_search_enabled?: boolean | null;
-	sample_questions?: string[] | null;
+	sample_messages?: string[] | null;
 	allowed_origins?: string[] | null;
 	hosted_chat?: boolean | null;
 	history_turns?: number | null;
@@ -107,7 +107,7 @@ export interface StatsResponse {
 	total_chunks: number;
 	total_conversations: number;
 	total_messages: number;
-	unanswered_questions: number;
+	unanswered_messages: number;
 	current_month_cost: number;
 	budget_limit: number;
 	budget_remaining: number;
@@ -145,8 +145,8 @@ export function sortChunkRefs(refs: RetrievedChunkRef[]): RetrievedChunkRef[] {
 
 export interface MessageResponse {
 	id: number;
-	question: string;
-	answer: string;
+	message: string;
+	response: string;
 	status: string;
 	tokens_in: number;
 	tokens_out: number;

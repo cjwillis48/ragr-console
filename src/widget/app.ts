@@ -150,10 +150,10 @@ export function App(props: AppProps): ComponentChildren {
 	});
 
 	const handleSubmit = useCallback(() => {
-		const question = inputValue.trim();
-		if (!question) return;
+		const message = inputValue.trim();
+		if (!message) return;
 		setInputValue('');
-		void chat.send(question);
+		void chat.send(message);
 		// Bump trigger so Input refocuses the textarea — keeps the mobile
 		// keyboard open between messages instead of dismissing it on send.
 		setFocusTrigger((n) => n + 1);
@@ -197,8 +197,8 @@ export function App(props: AppProps): ComponentChildren {
 		return null;
 	}
 
-	const sampleQuestions = modelInfo.sample_questions ?? [];
-	const showSampleQuestionsInGreeting = effectiveTheme.show_sample_questions_in_greeting ?? true;
+	const sampleMessages = modelInfo.sample_messages ?? [];
+	const showSampleMessagesInGreeting = effectiveTheme.show_sample_messages_in_greeting ?? true;
 
 	if (props.inline) {
 		return html`
@@ -206,8 +206,8 @@ export function App(props: AppProps): ComponentChildren {
 				modelInfo=${modelInfo}
 				theme=${effectiveTheme}
 				messages=${chat.messages}
-				sampleQuestions=${sampleQuestions}
-				showSampleQuestionsInGreeting=${showSampleQuestionsInGreeting}
+				sampleMessages=${sampleMessages}
+				showSampleMessagesInGreeting=${showSampleMessagesInGreeting}
 				inputValue=${inputValue}
 				isSending=${chat.isSending}
 				error=${chat.error}
@@ -231,8 +231,8 @@ export function App(props: AppProps): ComponentChildren {
 							modelInfo=${modelInfo}
 							theme=${effectiveTheme}
 							messages=${chat.messages}
-							sampleQuestions=${sampleQuestions}
-							showSampleQuestionsInGreeting=${showSampleQuestionsInGreeting}
+							sampleMessages=${sampleMessages}
+							showSampleMessagesInGreeting=${showSampleMessagesInGreeting}
 							inputValue=${inputValue}
 							isSending=${chat.isSending}
 							error=${chat.error}

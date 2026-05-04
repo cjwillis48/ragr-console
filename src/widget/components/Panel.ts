@@ -25,8 +25,8 @@ export interface PanelProps {
 	modelInfo: ModelInfo | null;
 	theme: WidgetTheme;
 	messages: Message[];
-	sampleQuestions: string[];
-	showSampleQuestionsInGreeting: boolean;
+	sampleMessages: string[];
+	showSampleMessagesInGreeting: boolean;
 	inputValue: string;
 	isSending: boolean;
 	error: string | null;
@@ -108,8 +108,8 @@ export function Panel(props: PanelProps): ComponentChildren {
 
 			<${MessageList}
 				messages=${props.messages}
-				sampleQuestions=${props.sampleQuestions}
-				showSampleQuestionsInGreeting=${props.showSampleQuestionsInGreeting}
+				sampleMessages=${props.sampleMessages}
+				showSampleMessagesInGreeting=${props.showSampleMessagesInGreeting}
 				onSuggestion=${props.onSuggestion}
 			/>
 

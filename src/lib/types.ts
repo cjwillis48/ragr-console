@@ -4,7 +4,7 @@ export interface ModelInfo {
 	description: string;
 	allowed_origins: string[];
 	accepting_requests: boolean;
-	sample_questions: string[];
+	sample_messages: string[];
 }
 
 export interface WidgetTheme {
@@ -19,7 +19,7 @@ export interface WidgetTheme {
 	bot_bubble_color?: string | null;
 	font_family?: string | null;
 	border_radius?: number | null;
-	show_sample_questions_in_greeting?: boolean | null;
+	show_sample_messages_in_greeting?: boolean | null;
 }
 
 export interface Message {
@@ -32,5 +32,5 @@ export interface Message {
 
 export type SSEEvent =
 	| { type: 'delta'; text: string }
-	| { type: 'done'; answer: string; status: string }
+	| { type: 'done'; response: string; status: string }
 	| { type: 'error'; error: string };

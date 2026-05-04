@@ -46,7 +46,7 @@ function parseEvent(raw: string): SSEEvent | null {
 		const parsed = JSON.parse(data);
 
 		if (eventType === 'done') {
-			return { type: 'done', answer: parsed.answer, status: parsed.status };
+			return { type: 'done', response: parsed.response, status: parsed.status };
 		}
 		if (eventType === 'error') {
 			return { type: 'error', error: parsed.error };

@@ -12,7 +12,7 @@
 		deleteConversation,
 		deleteMessage,
 		deleteSource,
-		generateSampleQuestions,
+		generateSampleMessages,
 		getChunksByIds,
 		getConversationMessages,
 		getConversations,
@@ -349,7 +349,7 @@
 		if (!model) return;
 		generatingSampleQuestions = true;
 		try {
-			model.sample_questions = await generateSampleQuestions(slug);
+			model.sample_messages = await generateSampleMessages(slug);
 			addToast('Sample questions generated', 'success');
 		} catch (e: unknown) {
 			addToast(e instanceof Error ? e.message : 'Failed to generate questions', 'error');
@@ -360,13 +360,13 @@
 
 	function addSampleQuestion() {
 		if (!model || !newSampleQuestion.trim()) return;
-		model.sample_questions = [...model.sample_questions, newSampleQuestion.trim()];
+		model.sample_messages = [...model.sample_messages, newSampleQuestion.trim()];
 		newSampleQuestion = '';
 	}
 
 	function removeSampleQuestion(index: number) {
 		if (!model) return;
-		model.sample_questions = model.sample_questions.filter((_, i) => i !== index);
+		model.sample_messages = model.sample_messages.filter((_, i) => i !== index);
 	}
 
 	async function handleSave() {
@@ -388,7 +388,7 @@
 				rerank_candidates: model.rerank_candidates,
 				rerank_threshold: model.rerank_threshold,
 				keyword_search_enabled: model.keyword_search_enabled,
-				sample_questions: model.sample_questions,
+				sample_messages: model.sample_messages,
 				allowed_origins: model.allowed_origins,
 				hosted_chat: model.hosted_chat,
 				history_turns: model.history_turns,
@@ -707,7 +707,7 @@
 		user_bubble_color: '#4f46e5',
 		bot_bubble_color: '#1e293b',
 		border_radius: 12,
-		show_sample_questions_in_greeting: true
+		show_sample_messages_in_greeting: true
 	};
 
 	async function handleSaveTheme() {
@@ -949,11 +949,11 @@
 						</button>
 					</div>
 					<p class="text-xs text-text-muted mt-1">Shown on off-topic responses. Toggle "Show in greeting" in the Widget tab.</p>
-					{#if model.sample_questions.length > 0}
+					{#if model.sample_messages.length > 0}
 						<div class="mt-2 flex flex-wrap gap-2">
-							{#each model.sample_questions as question, i}
+							{#each model.sample_messages as sample, i}
 								<span class="inline-flex items-center gap-1 bg-surface-alt border border-border rounded-lg px-3 py-1.5 text-sm">
-									{question}
+									{sample}
 									<button type="button" onclick={() => removeSampleQuestion(i)} class="text-text-muted hover:text-error ml-1">&times;</button>
 								</span>
 							{/each}
@@ -1255,7 +1255,7 @@
 							<input bind:value={theme.launcher_hint} placeholder="Text above chat button" class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-1.5 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent" />
 						</label>
 						<label class="flex items-center gap-2 pb-1.5 shrink-0">
-							<input type="checkbox" bind:checked={theme.show_sample_questions_in_greeting} class="accent-accent" />
+							<input type="checkbox" bind:checked={theme.show_sample_messages_in_greeting} class="accent-accent" />
 							<span class="text-xs text-text-muted">Sample Qs in greeting</span>
 						</label>
 					</div>
@@ -1671,8 +1671,8 @@
 											</div>
 										</div>
 										<div class="select-text">
-											<div class="text-sm font-medium">Q: {msg.question}</div>
-											<div class="text-sm text-text-muted mt-1">A: {msg.answer}</div>
+											<div class="text-sm font-medium">User: {msg.message}</div>
+											<div class="text-sm text-text-muted mt-1">Bot: {msg.response}</div>
 										</div>
 										<div class="text-xs text-text-muted">
 											Tokens: {msg.tokens_in} in / {msg.tokens_out} out
@@ -1795,7 +1795,7 @@
 					<p class="text-xs text-text-muted">Try it:</p>
 					<pre class="bg-surface rounded-lg px-3 py-2 text-xs font-mono break-all select-all whitespace-pre-wrap"><code>curl -H "Authorization: Bearer {newlyCreatedKey.raw_key}" \
   -H "Content-Type: application/json" \
-  -d '&lbrace;"question": "Hello"&rbrace;' \
+  -d '&lbrace;"message": "Hello"&rbrace;' \
   {env.PUBLIC_RAGR_API_URL}/models/{model.slug}/chat</code></pre>
 				</div>
 			{/if}
@@ -1848,7 +1848,7 @@
 					['Chunks', stats.total_chunks, ''],
 					['Conversations', stats.total_conversations, ''],
 					['Messages', stats.total_messages, ''],
-					['Unanswered', stats.unanswered_questions, stats.unanswered_questions > 0 ? 'text-yellow-400' : ''],
+					['Unanswered', stats.unanswered_messages, stats.unanswered_messages > 0 ? 'text-yellow-400' : ''],
 					['Month Cost', `$${stats.current_month_cost.toFixed(2)}`, ''],
 					['Budget Limit', `$${stats.budget_limit.toFixed(2)}`, ''],
 					['Remaining', `$${stats.budget_remaining.toFixed(2)}`, stats.budget_remaining < stats.budget_limit * 0.2 ? 'text-red-400' : '']

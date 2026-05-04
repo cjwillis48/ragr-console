@@ -20,13 +20,13 @@ export function fetchTheme(slug: string, apiBase?: string): Promise<WidgetTheme>
 
 export function streamChat(
 	slug: string,
-	question: string,
+	message: string,
 	sessionId: string,
 	callbacks: core.StreamCallbacks,
 	signal?: AbortSignal,
 	apiBase?: string
 ): Promise<void> {
-	return core.streamChat(baseFor(apiBase), slug, question, sessionId, callbacks, signal);
+	return core.streamChat(baseFor(apiBase), slug, message, sessionId, callbacks, signal);
 }
 
 export type { StreamCallbacks } from '../lib/api';

@@ -270,8 +270,8 @@ export async function revokeApiKey(slug: string, keyId: number): Promise<void> {
 }
 
 // Sample Questions
-export async function generateSampleQuestions(slug: string): Promise<string[]> {
-	const res = await authedFetch(`/models/${slug}/generate-sample-questions`, { method: 'POST' });
+export async function generateSampleMessages(slug: string): Promise<string[]> {
+	const res = await authedFetch(`/models/${slug}/generate-sample-messages`, { method: 'POST' });
 	return res.json();
 }
 

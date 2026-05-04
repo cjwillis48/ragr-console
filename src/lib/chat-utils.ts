@@ -10,7 +10,7 @@ export function renderMarkdown(text: string): string {
 // Decide whether a bot message should display the sample-question pills
 // underneath it. Two cases trigger the pills:
 //   1. The greeting — the very first assistant message, if the theme opts in
-//      via `show_sample_questions_in_greeting`. Gives new visitors an
+//      via `show_sample_messages_in_greeting`. Gives new visitors an
 //      obvious starting point.
 //   2. The first off-topic response — when the bot declines a question, we
 //      surface the sample questions again so the user can redirect.
@@ -18,10 +18,10 @@ export function getSuggestionsForMessage(
 	msg: Message,
 	index: number,
 	messages: Message[],
-	sampleQuestions: string[],
+	sampleMessages: string[],
 	showInGreeting: boolean
 ): string[] {
-	if (sampleQuestions.length === 0) return [];
+	if (sampleMessages.length === 0) return [];
 	if (
 		showInGreeting &&
 		index === messages.length - 1 &&
@@ -29,11 +29,11 @@ export function getSuggestionsForMessage(
 		msg.status === 'answered' &&
 		messages.every((m) => m.role === 'assistant')
 	) {
-		return sampleQuestions;
+		return sampleMessages;
 	}
 	if (msg.status === 'off_topic' && !msg.isStreaming) {
 		const isFirstOffTopic = messages.findIndex((m) => m.status === 'off_topic') === index;
-		if (isFirstOffTopic) return sampleQuestions;
+		if (isFirstOffTopic) return sampleMessages;
 	}
 	return [];
 }

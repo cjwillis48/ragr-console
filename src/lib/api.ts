@@ -7,7 +7,7 @@ export interface ApiConfig {
 
 export interface StreamCallbacks {
 	onDelta: (text: string) => void;
-	onDone: (answer: string, status: string) => void;
+	onDone: (response: string, status: string) => void;
 	onError: (msg: string) => void;
 }
 
@@ -29,7 +29,7 @@ export async function fetchTheme(cfg: ApiConfig, slug: string): Promise<WidgetTh
 export async function streamChat(
 	cfg: ApiConfig,
 	slug: string,
-	question: string,
+	message: string,
 	sessionId: string,
 	callbacks: StreamCallbacks,
 	signal?: AbortSignal
@@ -39,7 +39,7 @@ export async function streamChat(
 		res = await fetch(`${cfg.baseUrl}/models/${slug}/chat`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ question, stream: true, session_id: sessionId }),
+			body: JSON.stringify({ message, stream: true, session_id: sessionId }),
 			signal
 		});
 	} catch {
@@ -61,7 +61,7 @@ export async function streamChat(
 					callbacks.onDelta(event.text);
 					break;
 				case 'done':
-					callbacks.onDone(event.answer, event.status);
+					callbacks.onDone(event.response, event.status);
 					return;
 				case 'error':
 					callbacks.onError(event.error);

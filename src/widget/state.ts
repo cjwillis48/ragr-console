@@ -24,7 +24,7 @@ export interface UseChatResult {
 	messages: Message[];
 	isSending: boolean;
 	error: string | null;
-	send: (question: string) => Promise<void>;
+	send: (message: string) => Promise<void>;
 	abort: () => void;
 }
 
@@ -94,16 +94,16 @@ export function useChat(opts: UseChatOptions): UseChatResult {
 	}, []);
 
 	const send = useCallback(
-		async (rawQuestion: string) => {
-			const question = rawQuestion.trim();
-			if (!question || isSending) return;
+		async (rawMessage: string) => {
+			const message = rawMessage.trim();
+			if (!message || isSending) return;
 			if (!opts.modelInfo?.accepting_requests) return;
 
 			setError(null);
 			setIsSending(true);
 
 			const assistantId = randomId();
-			const userMessage: Message = { id: randomId(), role: 'user', content: question };
+			const userMessage: Message = { id: randomId(), role: 'user', content: message };
 			const assistantMessage: Message = {
 				id: assistantId,
 				role: 'assistant',
@@ -119,7 +119,7 @@ export function useChat(opts: UseChatOptions): UseChatResult {
 
 			await streamChat(
 				opts.slug,
-				question,
+				message,
 				sessionIdRef.current,
 				{
 					onDelta(delta) {
@@ -127,11 +127,11 @@ export function useChat(opts: UseChatOptions): UseChatResult {
 							prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + delta } : m))
 						);
 					},
-					onDone(answer, status) {
+					onDone(response, status) {
 						setMessages((prev) =>
 							prev.map((m) =>
 								m.id === assistantId
-									? { ...m, content: answer, status, isStreaming: false }
+									? { ...m, content: response, status, isStreaming: false }
 									: m
 							)
 						);

@@ -17,8 +17,8 @@ import { getSuggestionsForMessage, renderMarkdown } from '../../lib/chat-utils';
 
 export interface MessageListProps {
 	messages: Message[];
-	sampleQuestions: string[];
-	showSampleQuestionsInGreeting: boolean;
+	sampleMessages: string[];
+	showSampleMessagesInGreeting: boolean;
 	onSuggestion: (text: string) => void;
 }
 
@@ -39,8 +39,8 @@ export function MessageList(props: MessageListProps): ComponentChildren {
 					msg,
 					i,
 					props.messages,
-					props.sampleQuestions,
-					props.showSampleQuestionsInGreeting
+					props.sampleMessages,
+					props.showSampleMessagesInGreeting
 				);
 				if (msg.role === 'user') {
 					return html`
