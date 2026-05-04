@@ -188,11 +188,15 @@
 	.mobile-select {
 		flex: 1;
 		appearance: none;
-		background: #1e293b;
+		background-color: #1e293b;
+		background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 0.75rem;
 		color: #e2e8f0;
 		border: 1px solid rgba(255, 255, 255, 0.1);
 		border-radius: 8px;
-		padding: 0.5rem 0.75rem;
+		padding: 0.5rem 2.25rem 0.5rem 0.75rem;
 		font: inherit;
 		font-size: 0.9rem;
 		cursor: pointer;
@@ -222,6 +226,9 @@
 
 	/* ---- Mobile ---- */
 	@media (max-width: 960px) {
+		.demos-layout {
+			flex-direction: column;
+		}
 		.sidebar {
 			display: none;
 		}
