@@ -23,6 +23,12 @@
 	});
 </script>
 
+<svelte:head>
+	<!-- Admin is auth-gated, but search engines should not index the surface
+	     even if it ever leaks (e.g. error pages rendered before the gate). -->
+	<meta name="robots" content="noindex, nofollow" />
+</svelte:head>
+
 <div class="min-h-dvh bg-surface text-text overflow-x-hidden">
 	<header class="border-b border-border px-4 py-3">
 		<div class="max-w-5xl mx-auto flex items-center justify-between">

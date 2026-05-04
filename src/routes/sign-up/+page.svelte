@@ -3,7 +3,10 @@
 	import { dark } from '@clerk/themes';
 </script>
 
-<svelte:head><title>Sign Up - RAGr</title></svelte:head>
+<svelte:head>
+	<title>Sign Up - RAGr</title>
+	<meta name="robots" content="noindex, nofollow" />
+</svelte:head>
 
 <!-- Same rationale as sign-in: default to /admin, but preserve deep links. -->
 <div class="min-h-dvh bg-surface flex items-center justify-center">

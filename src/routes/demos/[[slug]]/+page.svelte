@@ -29,6 +29,24 @@
 
 <svelte:head>
 	<title>{data.models.find(m => m.slug === selectedSlug)?.name || 'Demos'} — RAGr Demos</title>
+	<meta
+		name="description"
+		content={data.models.find(m => m.slug === selectedSlug)?.description
+			|| 'Live demos of assistants built with RAGr.'}
+	/>
+	<meta
+		property="og:title"
+		content={`${data.models.find(m => m.slug === selectedSlug)?.name || 'Demos'} — RAGr Demos`}
+	/>
+	<meta
+		property="og:description"
+		content={data.models.find(m => m.slug === selectedSlug)?.description
+			|| 'Live demos of assistants built with RAGr.'}
+	/>
+	<meta
+		property="og:url"
+		content={`https://ragr.charliewillis.com/demos${selectedSlug ? `/${selectedSlug}` : ''}`}
+	/>
 </svelte:head>
 
 {#if data.models.length === 0}

@@ -3,7 +3,10 @@
 	import { dark } from '@clerk/themes';
 </script>
 
-<svelte:head><title>Sign In - RAGr</title></svelte:head>
+<svelte:head>
+	<title>Sign In - RAGr</title>
+	<meta name="robots" content="noindex, nofollow" />
+</svelte:head>
 
 <!--
 	fallbackRedirectUrl lands users on /admin when they sign in without a

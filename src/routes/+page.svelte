@@ -24,6 +24,12 @@
 <svelte:head>
 	<title>RAGr — RAG-as-a-Service for your apps</title>
 	<meta name="description" content="Build AI assistants grounded in your data. Ready to embed in minutes." />
+	<meta property="og:title" content="RAGr — RAG-as-a-Service for your apps" />
+	<meta property="og:description" content="Build AI assistants grounded in your data. Ready to embed in minutes." />
+	<meta property="og:url" content="https://ragr.charliewillis.com/" />
+	<meta name="twitter:title" content="RAGr — RAG-as-a-Service for your apps" />
+	<meta name="twitter:description" content="Build AI assistants grounded in your data. Ready to embed in minutes." />
+	<link rel="canonical" href="https://ragr.charliewillis.com/" />
 </svelte:head>
 
 <div class="min-h-dvh bg-surface text-text flex flex-col">

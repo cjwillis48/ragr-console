@@ -30,7 +30,10 @@
 </script>
 
 <svelte:head>
-	<title>Chat</title>
+	<title>Chat — RAGr</title>
+	<meta name="description" content="Chat with an AI assistant powered by RAGr." />
+	<meta property="og:title" content="Chat — RAGr" />
+	<meta property="og:description" content="Chat with an AI assistant powered by RAGr." />
 </svelte:head>
 
 <div class="fullpage-chat">
