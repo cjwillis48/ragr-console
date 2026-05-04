@@ -18,7 +18,8 @@ export const ALLOWED_FONT_FAMILIES = [
 	'Playfair Display',
 	'Courier New',
 	'Georgia',
-	'Fira Code'
+	'Fira Code',
+	'Fredoka One'
 ] as const;
 
 export const SYSTEM_FONTS = new Set(['Courier New', 'Georgia']);
