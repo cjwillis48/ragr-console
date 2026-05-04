@@ -205,7 +205,12 @@
 	/* ---- Chat panel ---- */
 	.chat-panel {
 		flex: 1;
+		/* min-width:0 prevents row-flex children from blowing out the row; min-height:0
+		   does the same for the column-flex case on mobile. Without it, a long streamed
+		   bot response grows the panel beyond its flex allocation, pushing the input
+		   offscreen — and because body has overflow:hidden, the user can't scroll to it. */
 		min-width: 0;
+		min-height: 0;
 		display: flex;
 		flex-direction: column;
 	}

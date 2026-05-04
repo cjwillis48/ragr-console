@@ -279,13 +279,10 @@ svg { display: block; }
 	flex: 1;
 	min-height: 0;
 	position: relative;
-	display: flex;
-	flex-direction: column;
 }
 
 .ragr-messages {
-	flex: 1;
-	min-height: 0;
+	height: 100%;
 	overflow-y: auto;
 	padding: 0.75rem 1rem;
 	display: flex;
