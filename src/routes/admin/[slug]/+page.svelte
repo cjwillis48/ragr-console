@@ -74,6 +74,12 @@
 	let sourcesSearch = $state('');
 	let sourcesSearchTimer: ReturnType<typeof setTimeout> | undefined;
 	const SOURCES_PER_PAGE = 50;
+
+	// Locks chunk-size / chunk-overlap / embedding-model controls. `model.has_content` is
+	// the server's view at load time; `sourcesTotal > 0` covers sources added in this
+	// session before the model is reloaded. Without the OR, those controls would stay
+	// enabled until refresh after the first source is added.
+	const hasContent = $derived(!!model?.has_content || sourcesTotal > 0);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
 	let saveSuccess = $state(false);
@@ -803,9 +809,21 @@
 {:else}
 	<div class="mb-3">
 		<a href="/admin" class="text-sm text-text-muted hover:text-accent">&larr; All Models</a>
-		<div class="flex items-center gap-4 mt-1">
+		<div class="flex items-center gap-3 mt-1 flex-wrap">
 			<h1 class="text-2xl font-semibold">{model.name}</h1>
 			<span class="text-sm text-text-muted font-mono">/{model.slug}</span>
+			<a
+				href="/chat/{model.slug}"
+				target="_blank"
+				rel="noopener"
+				title="Open chat in a new tab"
+				class="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-alt px-2.5 py-1 text-xs text-text-muted hover:text-text hover:border-accent transition-colors"
+			>
+				<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+					<path d="M3 4h7v2H5v6h6V8h2v5a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1zm6-2h5v5h-2V4.4l-5.3 5.3-1.4-1.4L10.6 3H9V2z" fill="currentColor" />
+				</svg>
+				Chat with this bot
+			</a>
 		</div>
 	</div>
 
@@ -975,7 +993,7 @@
 			<section class="rounded-xl border border-border bg-surface-alt/30 p-5 space-y-5">
 				<h3 class="text-sm font-semibold text-text uppercase tracking-wider">Retrieval & Generation</h3>
 
-				{#if model.has_content}
+				{#if hasContent}
 					<div class="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-muted">
 						Chunk size, chunk overlap, and embedding model are locked because this model already has ingested content.
 						Changing them would invalidate stored chunks and break references in past chats.
@@ -992,14 +1010,14 @@
 							<span class="text-sm text-text-muted">Chunk Size</span>
 							<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Number of characters per text chunk when ingesting sources">?</span>
 						</span>
-							<input type="number" disabled={model.has_content} bind:value={model.chunk_size} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
+							<input type="number" disabled={hasContent} bind:value={model.chunk_size} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
 						</label>
 						<label class="block">
 							<span class="inline-flex items-center gap-1">
 							<span class="text-sm text-text-muted">Chunk Overlap</span>
 							<span class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-border text-[10px] text-text-muted cursor-help" title="Character overlap between adjacent chunks. Higher values improve context continuity but increase storage">?</span>
 						</span>
-							<input type="number" disabled={model.has_content} bind:value={model.chunk_overlap} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
+							<input type="number" disabled={hasContent} bind:value={model.chunk_overlap} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed" />
 						</label>
 					</div>
 				</div>
@@ -1024,7 +1042,7 @@
 						</label>
 						<label class="block">
 							<span class="text-sm text-text-muted">Embedding Model</span>
-							<select disabled={model.has_content} bind:value={model.embedding_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed">
+							<select disabled={hasContent} bind:value={model.embedding_model} class="mt-1 w-full rounded-lg bg-surface-alt border border-border px-3 py-2 text-text font-mono text-sm focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed">
 								<option value="voyage-4-lite">voyage-4-lite</option>
 								<option value="voyage-4">voyage-4</option>
 								<option value="voyage-3">voyage-3</option>
@@ -1747,7 +1765,7 @@
 
 			<!-- Scope info -->
 			<div class="bg-surface-alt border border-border rounded-lg p-4 text-xs text-text-muted space-y-2">
-				<p class="font-medium text-text">Per-model keys are scoped to <span class="font-mono text-accent">/{model.slug}</span> only.</p>
+				<p class="font-medium text-text">Per-model keys are scoped to <span class="font-mono text-accent">/models/{model.slug}</span> endpoints only.</p>
 				<p>A key for this model cannot access other models. Using it on a different slug returns <span class="font-mono">401</span>.</p>
 			</div>
 
