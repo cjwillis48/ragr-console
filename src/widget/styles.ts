@@ -275,6 +275,14 @@ svg { display: block; }
 
 /* ---- Messages ---- */
 
+.ragr-messages-wrap {
+	flex: 1;
+	min-height: 0;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+}
+
 .ragr-messages {
 	flex: 1;
 	min-height: 0;
@@ -291,6 +299,53 @@ svg { display: block; }
 .ragr-messages::-webkit-scrollbar-thumb {
 	background: var(--ragr-border);
 	border-radius: 4px;
+}
+
+.ragr-jump-to-bottom {
+	position: absolute;
+	left: 50%;
+	bottom: 0.625rem;
+	transform: translateX(-50%);
+	width: 32px;
+	height: 32px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	background: var(--ragr-bg);
+	color: var(--ragr-text);
+	border: 1px solid var(--ragr-border);
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+	opacity: 0.92;
+	transition: opacity 160ms ease, transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1),
+		background 160ms ease;
+	animation: ragr-jump-in 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+	z-index: 1;
+}
+.ragr-jump-to-bottom:hover {
+	opacity: 1;
+	transform: translateX(-50%) translateY(-1px);
+	background: var(--ragr-soft-fill);
+}
+.ragr-jump-to-bottom:active {
+	transform: translateX(-50%) translateY(0);
+}
+.ragr-jump-to-bottom svg { width: 14px; height: 14px; }
+
+@keyframes ragr-jump-in {
+	from { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.92); }
+	to   { opacity: 0.92; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ragr-jump-to-bottom {
+		animation: none;
+		transition: opacity 160ms ease, background 160ms ease;
+	}
+	.ragr-jump-to-bottom:hover,
+	.ragr-jump-to-bottom:active {
+		transform: translateX(-50%);
+	}
 }
 
 .ragr-row { display: flex; }
