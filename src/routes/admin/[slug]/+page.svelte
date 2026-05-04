@@ -1542,7 +1542,7 @@
 										source.status === 'crawling' || source.status === 'processing' ? 'bg-indigo-500/15 text-indigo-400' :
 										'bg-slate-500/15 text-slate-400'
 									}">{source.status}</span>
-									{#if source.source_url}
+									{#if source.source_url && /^https?:\/\//i.test(source.source_url)}
 										&middot; <a href={source.source_url} target="_blank" class="text-accent hover:underline break-all">{source.source_url}</a>
 									{/if}
 								</div>
@@ -1795,7 +1795,7 @@
 					<p class="text-xs text-text-muted">Try it:</p>
 					<pre class="bg-surface rounded-lg px-3 py-2 text-xs font-mono break-all select-all whitespace-pre-wrap"><code>curl -H "Authorization: Bearer {newlyCreatedKey.raw_key}" \
   -H "Content-Type: application/json" \
-  -d '&lbrace;"message": "Hello"&rbrace;' \
+  -d '&lbrace;"question": "Hello"&rbrace;' \
   {env.PUBLIC_RAGR_API_URL}/models/{model.slug}/chat</code></pre>
 				</div>
 			{/if}
