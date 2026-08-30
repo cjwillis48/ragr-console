@@ -206,13 +206,11 @@ export interface SourceListResponse {
 	total: number;
 }
 
+// URL-only. Raw content goes through UpsertSourceRequest (PUT /sources/{id}).
 export interface CreateSourceRequest {
 	source_identifier?: string | null;
-	content?: string | null;
 	url?: string | null;
 	urls?: string[] | null;
-	content_type?: string;
-	source_url?: string;
 }
 
 export interface CreateSourceResponse {
@@ -220,6 +218,21 @@ export interface CreateSourceResponse {
 	status: string;
 	chunks_created: number | null;
 	skipped: boolean;
+	message: string;
+}
+
+export interface UpsertSourceRequest {
+	content: string;
+	content_type?: string; // "text" | "code"
+	source_url?: string;
+}
+
+export interface UpsertSourceResponse {
+	source_identifier: string;
+	status: string; // "complete"
+	chunk_count: number;
+	skipped: boolean;
+	embedding_cost: number;
 	message: string;
 }
 

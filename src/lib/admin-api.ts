@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/public';
-import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, DailyStatsEntry, TopSourceEntry, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry, CurrentUser } from './admin-types';
+import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, DailyStatsEntry, TopSourceEntry, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, UpsertSourceRequest, UpsertSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry, CurrentUser } from './admin-types';
 
 const baseUrl = () => env.PUBLIC_RAGR_API_URL;
 
@@ -150,8 +150,25 @@ export async function createSource(slug: string, data: CreateSourceRequest): Pro
 	return res.json();
 }
 
-export async function deleteSource(slug: string, sourceId: number): Promise<void> {
-	await authedFetch(`/models/${slug}/sources/${sourceId}`, { method: 'DELETE' });
+// Encode each path segment for FastAPI :path routes; slashes stay unencoded so
+// file-path identifiers like "src/main.py" round-trip correctly.
+function encodeIdentifier(identifier: string): string {
+	return identifier.split('/').map(encodeURIComponent).join('/');
+}
+
+// Push raw content directly (synchronous ingest). Used for text/code sources.
+// POST /sources is URL-only; raw content must go through this PUT endpoint.
+export async function upsertSource(slug: string, identifier: string, data: UpsertSourceRequest): Promise<UpsertSourceResponse> {
+	const res = await authedFetch(`/models/${slug}/sources/${encodeIdentifier(identifier)}`, {
+		method: 'PUT',
+		body: JSON.stringify(data),
+	});
+	return res.json();
+}
+
+// DELETE keys on source_identifier (file path / URL), not the integer row id.
+export async function deleteSource(slug: string, identifier: string): Promise<void> {
+	await authedFetch(`/models/${slug}/sources/${encodeIdentifier(identifier)}`, { method: 'DELETE' });
 }
 
 export async function getSourceChunks(slug: string, sourceId: number): Promise<ChunkListResponse> {

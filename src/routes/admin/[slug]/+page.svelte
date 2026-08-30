@@ -30,7 +30,8 @@
 		streamGenerateSystemPrompt,
 		updateModel,
 		updateTheme,
-		uploadSources
+		uploadSources,
+		upsertSource
 	} from '$lib/admin-api';
 	import type {
 		ApiKeyCreateResponse,
@@ -428,55 +429,59 @@
 	async function handleAddSource() {
 		addingSource = true;
 		try {
-			const req: CreateSourceRequest = {};
-			if (sourceType === 'url') {
-				const invalid = parsedUrls.filter(u => !isValidUrl(u));
-				if (invalid.length > 0) {
-					addToast(`Invalid URL${invalid.length > 1 ? 's' : ''}: ${invalid.join(', ')}. Only http/https URLs are allowed.`, 'error');
-					addingSource = false;
-					return;
-				}
-				if (parsedUrls.length === 1) {
-					req.url = parsedUrls[0];
-					req.source_identifier = parsedUrls[0];
-				} else {
-					req.urls = parsedUrls;
-				}
-			} else if (sourceType === 'text') {
-				req.content = sourceText;
-				req.source_identifier = sourceIdentifier.trim() || 'manual-text';
-			}
-			const res = await createSource(slug, req);
-			const count = sourceType === 'url' ? parsedUrls.length : 1;
-			addToast(res.message || `${count} source(s) added — processing...`, 'success');
-
-			// Add placeholder entries for URLs
-			if (sourceType === 'url') {
-				for (const url of parsedUrls) {
-					if (!sources.find(s => s.source_identifier === url)) {
-						sources = [...sources, {
-							id: 0,
-							source_identifier: url,
-							source_url: '',
-							content_type: '',
-							status: res.status || 'processing',
-							chunk_count: 0,
-							embedding_cost: 0,
-							ingested_at: new Date().toISOString(),
-							updated_at: new Date().toISOString()
-						}];
-					}
-				}
-			} else {
+			// Raw text → synchronous PUT /sources/{identifier}. POST /sources is URL-only.
+			if (sourceType === 'text') {
 				const identifier = sourceIdentifier.trim() || 'manual-text';
-				if (!sources.find(s => s.source_identifier === identifier)) {
+				const res = await upsertSource(slug, identifier, { content: sourceText, content_type: 'text' });
+				addToast(res.message || 'Source added', 'success');
+
+				// Optimistic row for instant feedback; the poll below replaces it with
+				// the server row (including the real id needed for chunks/delete).
+				if (!sources.find(s => s.source_identifier === res.source_identifier)) {
 					sources = [...sources, {
 						id: 0,
-						source_identifier: res.source_identifier || identifier,
+						source_identifier: res.source_identifier,
+						source_url: '',
+						content_type: 'text',
+						status: res.status,
+						chunk_count: res.chunk_count,
+						embedding_cost: res.embedding_cost,
+						ingested_at: new Date().toISOString(),
+						updated_at: new Date().toISOString()
+					}];
+				}
+
+				sourceText = '';
+				sourceIdentifier = '';
+				startSourcePolling();
+				return;
+			}
+
+			// URL source(s) → async POST /sources
+			const invalid = parsedUrls.filter(u => !isValidUrl(u));
+			if (invalid.length > 0) {
+				addToast(`Invalid URL${invalid.length > 1 ? 's' : ''}: ${invalid.join(', ')}. Only http/https URLs are allowed.`, 'error');
+				return;
+			}
+			const req: CreateSourceRequest = {};
+			if (parsedUrls.length === 1) {
+				req.url = parsedUrls[0];
+				req.source_identifier = parsedUrls[0];
+			} else {
+				req.urls = parsedUrls;
+			}
+			const res = await createSource(slug, req);
+			addToast(res.message || `${parsedUrls.length} source(s) added — processing...`, 'success');
+
+			for (const url of parsedUrls) {
+				if (!sources.find(s => s.source_identifier === url)) {
+					sources = [...sources, {
+						id: 0,
+						source_identifier: url,
 						source_url: '',
 						content_type: '',
 						status: res.status || 'processing',
-						chunk_count: res.chunks_created ?? 0,
+						chunk_count: 0,
 						embedding_cost: 0,
 						ingested_at: new Date().toISOString(),
 						updated_at: new Date().toISOString()
@@ -485,8 +490,6 @@
 			}
 
 			sourceUrlText = '';
-			sourceText = '';
-			sourceIdentifier = '';
 			startSourcePolling();
 		} catch (e: unknown) {
 			addToast(e instanceof Error ? e.message : 'Failed to add source', 'error');
@@ -658,10 +661,10 @@
 		sourcesSearchTimer = setTimeout(() => loadSourcesPage(0), 250);
 	}
 
-	async function handleDeleteSource(id: number) {
+	async function handleDeleteSource(identifier: string) {
 		if (!confirm('Delete this source and all its chunks?')) return;
 		try {
-			await deleteSource(slug, id);
+			await deleteSource(slug, identifier);
 			await loadTab('sources');
 		} catch (e: unknown) {
 			addToast(e instanceof Error ? e.message : 'Failed to delete source', 'error');
@@ -1565,7 +1568,7 @@
 									{/if}
 								</div>
 							</div>
-							<button onclick={() => handleDeleteSource(source.id)} class="text-sm text-text-muted hover:text-error ml-4 shrink-0">Delete</button>
+							<button onclick={() => handleDeleteSource(source.source_identifier)} class="text-sm text-text-muted hover:text-error ml-4 shrink-0">Delete</button>
 						</div>
 						{#if chunksSourceId === source.id}
 							<div class="bg-surface border border-border rounded-lg p-4 ml-4 space-y-2">
