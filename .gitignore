@@ -42,3 +42,6 @@ vite.widget.config.ts.timestamp-*
 
 # Claude
 .claude/
+
+# Squirrel parking lot (local idea capture)
+.squirrel/
