@@ -4,7 +4,7 @@ import { env } from '$env/dynamic/public';
 // Loader script served at /chat/{slug}/loader.js. Customer sites include
 // this with a single <script> tag:
 //
-//   <script src="https://app.ragr.ai/chat/my-model/loader.js" async></script>
+//   <script src="https://ragr.dev/chat/my-model/loader.js" async></script>
 //
 // The loader is intentionally tiny: it dynamically imports the real widget
 // bundle (/widget/ragr-chat.js) once per page and mounts a <ragr-chat>

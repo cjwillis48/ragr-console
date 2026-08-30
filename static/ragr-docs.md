@@ -55,7 +55,7 @@ RAGr is currently in early access. Contact us for pricing information.
 
 ## Getting started
 
-1. Sign up at ragr.charliewillis.com
+1. Sign up at ragr.dev
 2. Create your first model in the admin console
 3. Upload your content as sources
 4. Embed the chat widget or integrate via API

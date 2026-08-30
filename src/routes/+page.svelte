@@ -32,13 +32,13 @@
 		property="og:description"
 		content="Build AI assistants grounded in your own data. RAGr ingests your sources, manages retrieval and embeddings, and gives you a production-ready chat widget you can drop into any site in minutes."
 	/>
-	<meta property="og:url" content="https://ragr.charliewillis.com/" />
+	<meta property="og:url" content="https://ragr.dev/" />
 	<meta name="twitter:title" content="RAGr — RAG-as-a-Service for your apps" />
 	<meta
 		name="twitter:description"
 		content="Build AI assistants grounded in your own data. RAGr ingests your sources, manages retrieval and embeddings, and gives you a production-ready chat widget you can drop into any site in minutes."
 	/>
-	<link rel="canonical" href="https://ragr.charliewillis.com/" />
+	<link rel="canonical" href="https://ragr.dev/" />
 </svelte:head>
 
 <div class="min-h-dvh bg-surface text-text flex flex-col">
