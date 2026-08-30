@@ -31,9 +31,15 @@
 
 <svelte:head>
 	<title>Chat — RAGr</title>
-	<meta name="description" content="Chat with an AI assistant powered by RAGr." />
+	<meta
+		name="description"
+		content="Chat with an AI assistant powered by RAGr — a production-ready RAG chat widget grounded in real data, designed to be embedded directly into any website."
+	/>
 	<meta property="og:title" content="Chat — RAGr" />
-	<meta property="og:description" content="Chat with an AI assistant powered by RAGr." />
+	<meta
+		property="og:description"
+		content="Chat with an AI assistant powered by RAGr — a production-ready RAG chat widget grounded in real data, designed to be embedded directly into any website."
+	/>
 </svelte:head>
 
 <div class="fullpage-chat">

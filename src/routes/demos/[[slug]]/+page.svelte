@@ -32,7 +32,7 @@
 	<meta
 		name="description"
 		content={data.models.find(m => m.slug === selectedSlug)?.description
-			|| 'Live demos of assistants built with RAGr.'}
+			|| 'Live demos of AI assistants built with RAGr — each one is a production chat widget grounded in real data, the same widget you can embed in your own site.'}
 	/>
 	<meta
 		property="og:title"
@@ -41,7 +41,7 @@
 	<meta
 		property="og:description"
 		content={data.models.find(m => m.slug === selectedSlug)?.description
-			|| 'Live demos of assistants built with RAGr.'}
+			|| 'Live demos of AI assistants built with RAGr — each one is a production chat widget grounded in real data, the same widget you can embed in your own site.'}
 	/>
 	<meta
 		property="og:url"
