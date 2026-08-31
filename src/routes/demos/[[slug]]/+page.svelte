@@ -45,7 +45,7 @@
 	/>
 	<meta
 		property="og:url"
-		content={`https://ragr.charliewillis.com/demos${selectedSlug ? `/${selectedSlug}` : ''}`}
+		content={`https://ragr.dev/demos${selectedSlug ? `/${selectedSlug}` : ''}`}
 	/>
 </svelte:head>
 
