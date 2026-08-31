@@ -44,7 +44,7 @@
 		{/if}
 	</main>
 	<footer class="max-w-5xl mx-auto px-4 py-6 border-t border-border text-center text-sm text-text-muted">
-		Bug or feature request? <a href="mailto:contact@ragr.charliewillis.com" class="hover:text-accent transition-colors">contact@ragr.charliewillis.com</a>
+		Bug or feature request? <a href="mailto:contact@ragr.dev" class="hover:text-accent transition-colors">contact@ragr.dev</a>
 	</footer>
 </div>
 <Toast />
