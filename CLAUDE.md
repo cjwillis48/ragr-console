@@ -59,6 +59,19 @@ root**, published as a single IIFE at `static/widget/ragr-chat.js`.
   emits a hashed `ragr-chat.<sha>.js` alongside the unversioned file. Caching for
   both is declared in `_headers` (Cloudflare Pages).
 
+## The admin model editor (`src/routes/admin/[slug]/`)
+
+`+page.svelte` is only the shell: it loads the model, owns the tab bar and the
+`#hash` sync, and renders one component per tab (`SettingsTab`, `WidgetTab`,
+`SourcesTab`, …), all colocated in the same folder. Each tab component fetches
+its own data on mount — there is no central loader, so put new tab logic in the
+tab's own file. Only two things cross a tab boundary: `model` (passed down as
+the reactive proxy; mutate fields in place, and report a wholesale replacement
+back through `SettingsTab`'s `onSaved`) and `sourcesTotal` (bound from
+`SourcesTab`, used for the `hasContent` lock on the chunking controls).
+`SettingsTab` and `SourcesTab` split further into
+`BehaviorSection`/`RetrievalSection`/`AccessSection` and `AddSourceForm`.
+
 ## Conventions
 
 - **Svelte 5 runes only.** `$state` / `$props` / `$derived` / `$effect`. There is no
@@ -117,8 +130,5 @@ reach production unnoticed.
 
 ## Known rough edges
 
-- `src/routes/admin/[slug]/+page.svelte` is ~2000 lines (a third of the codebase) —
-  the whole model editor in one file. Read it carefully before editing; ask before
-  restructuring it.
 - `.claude/SECURITY_FINDINGS.md` (local-only) tracks open items, notably no
   Subresource Integrity on the injected widget bundle.
