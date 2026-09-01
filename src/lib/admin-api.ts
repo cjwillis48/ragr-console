@@ -14,6 +14,7 @@ import type {
 	CreateSourceResponse,
 	UpsertSourceRequest,
 	UpsertSourceResponse,
+	ReingestResponse,
 	PresignResponse,
 	ChunkListResponse,
 	ChunkDetail,
@@ -239,6 +240,24 @@ export async function getSourceChunks(slug: string, sourceId: number): Promise<C
 
 export async function getChunksByIds(slug: string, ids: number[]): Promise<ChunkDetail[]> {
 	const res = await authedFetch(`/models/${slug}/chunks?ids=${ids.join(',')}`);
+	return res.json();
+}
+
+// Rebuild through the current extraction + chunking pipeline. The backend picks
+// the mode per source: re-fetch when a source_url exists, else re-chunk stored
+// text. Returns 202 — work is queued, so callers should refresh the source list.
+export async function reingestSource(slug: string, identifier: string): Promise<ReingestResponse> {
+	const res = await authedFetch(
+		`/models/${slug}/sources/${encodeIdentifier(identifier)}/reingest`,
+		{
+			method: 'POST'
+		}
+	);
+	return res.json();
+}
+
+export async function reingestAllSources(slug: string): Promise<ReingestResponse> {
+	const res = await authedFetch(`/models/${slug}/sources/reingest`, { method: 'POST' });
 	return res.json();
 }
 

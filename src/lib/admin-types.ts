@@ -194,10 +194,24 @@ export interface SourceResponse {
 	source_url: string;
 	content_type: string;
 	status: string;
+	status_detail?: string | null;
 	chunk_count: number;
 	embedding_cost: number;
 	ingested_at: string;
 	updated_at: string;
+}
+
+export interface ReingestItem {
+	source_identifier: string;
+	mode: 'refetch' | 'rechunk' | 'skipped';
+	reason?: string | null;
+}
+
+export interface ReingestResponse {
+	model_slug: string;
+	queued: number;
+	skipped: number;
+	sources: ReingestItem[];
 }
 
 export interface SourceListResponse {

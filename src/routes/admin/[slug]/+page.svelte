@@ -12,6 +12,8 @@
 		deleteConversation,
 		deleteMessage,
 		deleteSource,
+		reingestSource,
+		reingestAllSources,
 		generateSampleMessages,
 		getChunksByIds,
 		getConversationMessages,
@@ -706,6 +708,54 @@
 			await loadTab('sources');
 		} catch (e: unknown) {
 			addToast(e instanceof Error ? e.message : 'Failed to delete source', 'error');
+		}
+	}
+
+	let reingestingSource = $state<string | null>(null);
+	let reingestingAll = $state(false);
+
+	async function handleReingestSource(identifier: string) {
+		reingestingSource = identifier;
+		try {
+			const res = await reingestSource(slug, identifier);
+			const item = res.sources[0];
+			if (item?.mode === 'skipped') {
+				addToast(item.reason ?? 'Nothing to rebuild for this source', 'error');
+				return;
+			}
+			addToast(
+				item?.mode === 'refetch'
+					? 'Re-fetching and rebuilding source'
+					: 'Rebuilding source from stored content',
+				'success'
+			);
+			await loadTab('sources');
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Failed to rebuild source', 'error');
+		} finally {
+			reingestingSource = null;
+		}
+	}
+
+	async function handleReingestAll() {
+		if (
+			!confirm(
+				'Rebuild every source through the current extraction and chunking?\n\n' +
+					'Sources with a URL are re-fetched; the rest are rebuilt from stored content. ' +
+					'Every chunk is re-embedded, so this costs money and takes a while on large models.'
+			)
+		)
+			return;
+		reingestingAll = true;
+		try {
+			const res = await reingestAllSources(slug);
+			const skipped = res.skipped ? `, ${res.skipped} skipped` : '';
+			addToast(`Queued ${res.queued} source${res.queued === 1 ? '' : 's'}${skipped}`, 'success');
+			await loadTab('sources');
+		} catch (e: unknown) {
+			addToast(e instanceof Error ? e.message : 'Failed to rebuild sources', 'error');
+		} finally {
+			reingestingAll = false;
 		}
 	}
 
@@ -1902,8 +1952,18 @@
 							>
 						{/if}
 					</h3>
-					<button onclick={handlePurge} class="text-xs text-error hover:underline">Purge All</button
-					>
+					<div class="flex items-center gap-3">
+						<button
+							onclick={handleReingestAll}
+							disabled={reingestingAll}
+							title="Rebuild every source through the current extraction and chunking"
+							class="text-xs text-accent hover:underline disabled:opacity-50"
+							>{reingestingAll ? 'Queueing...' : 'Rebuild All'}</button
+						>
+						<button onclick={handlePurge} class="text-xs text-error hover:underline"
+							>Purge All</button
+						>
+					</div>
 				</div>
 				<div class="space-y-2">
 					{#each sources as source (source.source_identifier)}
@@ -1943,11 +2003,25 @@
 										>
 									{/if}
 								</div>
+								{#if source.status_detail}
+									<div class="mt-1.5 text-xs text-rose-300">{source.status_detail}</div>
+								{/if}
 							</div>
-							<button
-								onclick={() => handleDeleteSource(source.source_identifier)}
-								class="ml-4 shrink-0 text-sm text-text-muted hover:text-error">Delete</button
-							>
+							<div class="ml-4 flex shrink-0 items-center gap-3">
+								<button
+									onclick={() => handleReingestSource(source.source_identifier)}
+									disabled={reingestingSource === source.source_identifier}
+									title="Re-run this source through the current extraction and chunking"
+									class="text-sm text-text-muted hover:text-accent disabled:opacity-50"
+									>{reingestingSource === source.source_identifier
+										? 'Rebuilding...'
+										: 'Rebuild'}</button
+								>
+								<button
+									onclick={() => handleDeleteSource(source.source_identifier)}
+									class="text-sm text-text-muted hover:text-error">Delete</button
+								>
+							</div>
 						</div>
 						{#if chunksSourceId === source.id}
 							<div class="ml-4 space-y-2 rounded-lg border border-border bg-surface p-4">
