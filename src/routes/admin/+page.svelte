@@ -67,72 +67,92 @@
 	}
 
 	function slugify(name: string) {
-		return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+		return name
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '');
 	}
 </script>
 
 <svelte:head><title>RAGr Admin</title></svelte:head>
 
-<div class="flex items-center justify-between mb-6">
+<div class="mb-6 flex items-center justify-between">
 	<h1 class="text-2xl font-semibold">Models</h1>
 	<button
 		onclick={() => (showCreate = !showCreate)}
-		class="rounded-lg bg-accent px-4 py-2 text-sm text-white font-medium hover:bg-accent/90"
+		class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90"
 	>
 		{showCreate ? 'Cancel' : 'New Model'}
 	</button>
 </div>
 
 {#if error}
-	<div class="bg-error/10 border border-error/30 rounded-lg px-4 py-3 text-sm text-error mb-4">
+	<div class="mb-4 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
 		{error}
 	</div>
 {/if}
 
 {#if showCreate}
-	<form onsubmit={(e) => { e.preventDefault(); handleCreate(); }} class="bg-surface-alt border border-border rounded-lg p-4 mb-6 space-y-3">
+	<form
+		onsubmit={(e) => {
+			e.preventDefault();
+			handleCreate();
+		}}
+		class="mb-6 space-y-3 rounded-lg border border-border bg-surface-alt p-4"
+	>
 		{#if requiresByok}
-			<div class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+			<div
+				class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200"
+			>
 				<div class="font-medium">An Anthropic and a Voyage API key are required.</div>
-				<div class="text-amber-200/80 mt-1">
+				<div class="mt-1 text-amber-200/80">
 					Get them at
-					<a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" class="underline hover:text-amber-100">console.anthropic.com</a>
+					<a
+						href="https://console.anthropic.com/settings/keys"
+						target="_blank"
+						rel="noopener"
+						class="underline hover:text-amber-100">console.anthropic.com</a
+					>
 					and
-					<a href="https://dashboard.voyageai.com/api-keys" target="_blank" rel="noopener" class="underline hover:text-amber-100">dashboard.voyageai.com</a>.
-					Keys are encrypted at rest.
+					<a
+						href="https://dashboard.voyageai.com/api-keys"
+						target="_blank"
+						rel="noopener"
+						class="underline hover:text-amber-100">dashboard.voyageai.com</a
+					>. Keys are encrypted at rest.
 				</div>
 			</div>
 		{/if}
 		<div>
-			<label for="name" class="block text-sm text-text-muted mb-1">Name</label>
+			<label for="name" class="mb-1 block text-sm text-text-muted">Name</label>
 			<input
 				id="name"
 				bind:value={newName}
 				oninput={() => (newSlug = slugify(newName))}
 				placeholder="My Model"
-				class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-text
-					placeholder:text-text-muted focus:outline-none focus:border-accent"
+				class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-text
+					placeholder:text-text-muted focus:border-accent focus:outline-none"
 			/>
 		</div>
 		<div>
-			<label for="slug" class="block text-sm text-text-muted mb-1">Slug</label>
+			<label for="slug" class="mb-1 block text-sm text-text-muted">Slug</label>
 			<input
 				id="slug"
 				bind:value={newSlug}
 				placeholder="my-model"
-				class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-text
-					placeholder:text-text-muted focus:outline-none focus:border-accent"
+				class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-text
+					placeholder:text-text-muted focus:border-accent focus:outline-none"
 			/>
 		</div>
 
 		<details open={requiresByok} class="group">
-			<summary class="cursor-pointer text-sm text-text-muted select-none flex items-center gap-2">
-				<span class="group-open:rotate-90 transition-transform inline-block">›</span>
+			<summary class="flex cursor-pointer items-center gap-2 text-sm text-text-muted select-none">
+				<span class="inline-block transition-transform group-open:rotate-90">›</span>
 				API keys {requiresByok ? '(required)' : '(optional)'}
 			</summary>
 			<div class="mt-3 space-y-3">
 				<div>
-					<label for="anthropic_key" class="block text-sm text-text-muted mb-1">
+					<label for="anthropic_key" class="mb-1 block text-sm text-text-muted">
 						Anthropic API key{requiresByok ? ' *' : ''}
 					</label>
 					<input
@@ -141,12 +161,12 @@
 						bind:value={newAnthropicKey}
 						placeholder="sk-ant-..."
 						autocomplete="off"
-						class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-text font-mono text-sm
-							placeholder:text-text-muted focus:outline-none focus:border-accent"
+						class="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm text-text
+							placeholder:text-text-muted focus:border-accent focus:outline-none"
 					/>
 				</div>
 				<div>
-					<label for="voyage_key" class="block text-sm text-text-muted mb-1">
+					<label for="voyage_key" class="mb-1 block text-sm text-text-muted">
 						Voyage API key{requiresByok ? ' *' : ''}
 					</label>
 					<input
@@ -155,8 +175,8 @@
 						bind:value={newVoyageKey}
 						placeholder="pa-..."
 						autocomplete="off"
-						class="w-full rounded-lg bg-surface border border-border px-3 py-2 text-text font-mono text-sm
-							placeholder:text-text-muted focus:outline-none focus:border-accent"
+						class="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm text-text
+							placeholder:text-text-muted focus:border-accent focus:outline-none"
 					/>
 				</div>
 			</div>
@@ -165,8 +185,8 @@
 		<button
 			type="submit"
 			disabled={creating || !canSubmit}
-			class="rounded-lg bg-accent px-4 py-2 text-sm text-white font-medium hover:bg-accent/90
-				disabled:opacity-40 disabled:cursor-not-allowed"
+			class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90
+				disabled:cursor-not-allowed disabled:opacity-40"
 		>
 			{creating ? 'Creating...' : 'Create'}
 		</button>
@@ -182,54 +202,92 @@
 		{#each models as model}
 			<a
 				href="/admin/{model.slug}"
-				class="group relative block bg-surface-alt border border-border rounded-lg p-4 pr-36
-					hover:border-accent/40 transition-colors cursor-pointer no-underline text-inherit min-w-0"
+				class="group relative block min-w-0 cursor-pointer rounded-lg border border-border bg-surface-alt
+					p-4 pr-36 text-inherit no-underline transition-colors hover:border-accent/40"
 			>
-				<div class="flex items-center gap-2 sm:gap-3 min-w-0">
-					<h2 class="font-medium truncate min-w-0">{model.name}</h2>
-					<span class="hidden sm:inline text-xs text-text-muted font-mono truncate">/{model.slug}</span>
+				<div class="flex min-w-0 items-center gap-2 sm:gap-3">
+					<h2 class="min-w-0 truncate font-medium">{model.name}</h2>
+					<span class="hidden truncate font-mono text-xs text-text-muted sm:inline"
+						>/{model.slug}</span
+					>
 					{#if !model.is_active}
-						<span class="text-xs bg-text-muted/10 text-text-muted px-2 py-0.5 rounded shrink-0">inactive</span>
+						<span class="shrink-0 rounded bg-text-muted/10 px-2 py-0.5 text-xs text-text-muted"
+							>inactive</span
+						>
 					{/if}
 				</div>
 				{#if model.description}
-					<p class="text-sm text-text-muted mt-1 truncate">{model.description}</p>
+					<p class="mt-1 truncate text-sm text-text-muted">{model.description}</p>
 				{/if}
 
 				<!-- Action icons — top-right, stop propagation so they don't trigger card navigation -->
 				<span class="absolute top-3 right-3 flex items-center gap-1">
 					<button
-						onclick={(e) => { e.preventDefault(); e.stopPropagation(); window.open('/chat/' + model.slug, '_blank'); }}
-						class="w-11 h-11 inline-flex items-center justify-center rounded-md
-							text-text-muted hover:text-accent hover:bg-accent/10 transition-colors"
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							window.open('/chat/' + model.slug, '_blank');
+						}}
+						class="inline-flex h-11 w-11 items-center justify-center rounded-md
+							text-text-muted transition-colors hover:bg-accent/10 hover:text-accent"
 						aria-label="Chat with {model.name}"
 						title="Open chat"
 					>
-						<svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" aria-hidden="true">
-							<path d="M5.5 7h5M5.5 9.5h3M8 2C4.68 2 2 4.4 2 7.3c0 1.35.56 2.58 1.49 3.53L3 14l2.72-1.27c.7.18 1.47.27 2.28.27 3.32 0 6-2.4 6-5.3S11.32 2 8 2z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+						<svg viewBox="0 0 16 16" class="h-4 w-4" fill="none" aria-hidden="true">
+							<path
+								d="M5.5 7h5M5.5 9.5h3M8 2C4.68 2 2 4.4 2 7.3c0 1.35.56 2.58 1.49 3.53L3 14l2.72-1.27c.7.18 1.47.27 2.28.27 3.32 0 6-2.4 6-5.3S11.32 2 8 2z"
+								stroke="currentColor"
+								stroke-width="1.4"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
 						</svg>
 					</button>
 					<button
-						onclick={(e) => { e.preventDefault(); e.stopPropagation(); goto('/admin/' + model.slug); }}
-						class="w-11 h-11 inline-flex items-center justify-center rounded-md
-							text-text-muted hover:text-text hover:bg-white/5 transition-colors"
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							goto('/admin/' + model.slug);
+						}}
+						class="inline-flex h-11 w-11 items-center justify-center rounded-md
+							text-text-muted transition-colors hover:bg-white/5 hover:text-text"
 						aria-label="Edit {model.name}"
 						title="Edit settings"
 					>
-						<svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" aria-hidden="true">
-							<path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-							<path d="M9.5 3.5l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+						<svg viewBox="0 0 16 16" class="h-4 w-4" fill="none" aria-hidden="true">
+							<path
+								d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z"
+								stroke="currentColor"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+							<path
+								d="M9.5 3.5l3 3"
+								stroke="currentColor"
+								stroke-width="1.5"
+								stroke-linecap="round"
+							/>
 						</svg>
 					</button>
 					<button
-						onclick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(model.slug); }}
-						class="w-11 h-11 inline-flex items-center justify-center rounded-md
-							text-text-muted hover:text-error hover:bg-error/10 transition-colors"
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							handleDelete(model.slug);
+						}}
+						class="inline-flex h-11 w-11 items-center justify-center rounded-md
+							text-text-muted transition-colors hover:bg-error/10 hover:text-error"
 						aria-label="Delete {model.name}"
 						title="Delete"
 					>
-						<svg viewBox="0 0 16 16" class="w-4 h-4" fill="none" aria-hidden="true">
-							<path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+						<svg viewBox="0 0 16 16" class="h-4 w-4" fill="none" aria-hidden="true">
+							<path
+								d="M3 3l10 10M13 3L3 13"
+								stroke="currentColor"
+								stroke-width="1.8"
+								stroke-linecap="round"
+							/>
 						</svg>
 					</button>
 				</span>

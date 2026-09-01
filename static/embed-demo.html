@@ -1,149 +1,215 @@
 <!doctype html>
 <html lang="en">
-<head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>Ragr widget demo</title>
-	<meta name="robots" content="noindex" />
-	<style>
-		/*
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Ragr widget demo</title>
+		<meta name="robots" content="noindex" />
+		<style>
+			/*
 		 * Deliberately hostile parent CSS to stress the widget's shadow DOM
 		 * isolation. If the widget rendering depends on any inherited styles
 		 * or leaks into these resets, problems will show up here immediately.
 		 */
-		* { box-sizing: border-box; }
-		html, body {
-			margin: 0;
-			padding: 0;
-			font-family: Georgia, "Times New Roman", serif;
-			line-height: 1.7;
-			color: #222;
-			background: #fafaf5;
-		}
-		/* Hostile: try to nuke button styles globally. The widget must survive this. */
-		button { all: unset !important; cursor: pointer; }
-		/* Hostile: collapse div padding. */
-		div { border: 0; }
-		/* Hostile: force weird input resets. */
-		input, textarea { all: unset; }
+			* {
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				font-family: Georgia, 'Times New Roman', serif;
+				line-height: 1.7;
+				color: #222;
+				background: #fafaf5;
+			}
+			/* Hostile: try to nuke button styles globally. The widget must survive this. */
+			button {
+				all: unset !important;
+				cursor: pointer;
+			}
+			/* Hostile: collapse div padding. */
+			div {
+				border: 0;
+			}
+			/* Hostile: force weird input resets. */
+			input,
+			textarea {
+				all: unset;
+			}
 
-		header {
-			position: sticky;
-			top: 0;
-			background: #2c2c30;
-			color: #fff;
-			padding: 1rem 1.5rem;
-			z-index: 10;
-			font-family: system-ui, sans-serif;
-			font-weight: 600;
-		}
-		main {
-			max-width: 720px;
-			margin: 2rem auto;
-			padding: 0 1.5rem;
-		}
-		main h1 { font-size: 2rem; margin: 0 0 1rem; }
-		main h2 { font-size: 1.4rem; margin: 2rem 0 0.5rem; }
-		main p { margin: 0 0 1rem; }
-		.spacer {
-			height: 120vh;
-			margin: 2rem 0;
-			border: 1px dashed #bbb;
-			display: grid;
-			place-items: center;
-			color: #888;
-			font-style: italic;
-		}
-		.parent-form {
-			background: #fff;
-			border: 1px solid #ddd;
-			padding: 1.25rem;
-			border-radius: 8px;
-			margin: 2rem 0;
-			font-family: system-ui, sans-serif;
-		}
-		.parent-form label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
-		.parent-form .field { display: block; width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
+			header {
+				position: sticky;
+				top: 0;
+				background: #2c2c30;
+				color: #fff;
+				padding: 1rem 1.5rem;
+				z-index: 10;
+				font-family: system-ui, sans-serif;
+				font-weight: 600;
+			}
+			main {
+				max-width: 720px;
+				margin: 2rem auto;
+				padding: 0 1.5rem;
+			}
+			main h1 {
+				font-size: 2rem;
+				margin: 0 0 1rem;
+			}
+			main h2 {
+				font-size: 1.4rem;
+				margin: 2rem 0 0.5rem;
+			}
+			main p {
+				margin: 0 0 1rem;
+			}
+			.spacer {
+				height: 120vh;
+				margin: 2rem 0;
+				border: 1px dashed #bbb;
+				display: grid;
+				place-items: center;
+				color: #888;
+				font-style: italic;
+			}
+			.parent-form {
+				background: #fff;
+				border: 1px solid #ddd;
+				padding: 1.25rem;
+				border-radius: 8px;
+				margin: 2rem 0;
+				font-family: system-ui, sans-serif;
+			}
+			.parent-form label {
+				display: block;
+				font-weight: 600;
+				margin-bottom: 0.25rem;
+			}
+			.parent-form .field {
+				display: block;
+				width: 100%;
+				padding: 0.5rem 0.75rem;
+				border: 1px solid #ccc;
+				border-radius: 4px;
+				font-family: inherit;
+			}
 
-		.demo-bar {
-			position: fixed;
-			left: 1rem;
-			top: 4rem;
-			background: rgba(255, 255, 255, 0.95);
-			border: 1px solid #ddd;
-			border-radius: 8px;
-			padding: 0.75rem 1rem;
-			font-family: system-ui, sans-serif;
-			font-size: 0.85rem;
-			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-			z-index: 5;
-			max-width: 260px;
-		}
-		.demo-bar h3 { margin: 0 0 0.5rem; font-size: 0.9rem; }
-		.demo-bar code { font-family: ui-monospace, Menlo, monospace; font-size: 0.75rem; background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
-		.demo-bar label { display: flex; align-items: center; gap: 0.5rem; margin: 0.3rem 0; font-size: 0.8rem; cursor: pointer; }
-	</style>
-</head>
-<body>
-	<header>Pretend customer site — widget harness</header>
+			.demo-bar {
+				position: fixed;
+				left: 1rem;
+				top: 4rem;
+				background: rgba(255, 255, 255, 0.95);
+				border: 1px solid #ddd;
+				border-radius: 8px;
+				padding: 0.75rem 1rem;
+				font-family: system-ui, sans-serif;
+				font-size: 0.85rem;
+				box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+				z-index: 5;
+				max-width: 260px;
+			}
+			.demo-bar h3 {
+				margin: 0 0 0.5rem;
+				font-size: 0.9rem;
+			}
+			.demo-bar code {
+				font-family: ui-monospace, Menlo, monospace;
+				font-size: 0.75rem;
+				background: #f0f0f0;
+				padding: 0.1rem 0.3rem;
+				border-radius: 3px;
+			}
+			.demo-bar label {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				margin: 0.3rem 0;
+				font-size: 0.8rem;
+				cursor: pointer;
+			}
+		</style>
+	</head>
+	<body>
+		<header>Pretend customer site — widget harness</header>
 
-	<aside class="demo-bar">
-		<h3>Widget harness</h3>
-		<p style="margin:0 0 0.5rem;">Tests a <code>&lt;ragr-chat&gt;</code> mounted on a realistic parent page with scrolling, sticky headers, hostile CSS resets, and a parent form.</p>
-		<label>
-			<input type="checkbox" id="toggle-open" />
-			Force open state
-		</label>
-		<label>
-			<input type="checkbox" id="toggle-inline" />
-			Inline mode (fills container)
-		</label>
-	</aside>
+		<aside class="demo-bar">
+			<h3>Widget harness</h3>
+			<p style="margin: 0 0 0.5rem">
+				Tests a <code>&lt;ragr-chat&gt;</code> mounted on a realistic parent page with scrolling,
+				sticky headers, hostile CSS resets, and a parent form.
+			</p>
+			<label>
+				<input type="checkbox" id="toggle-open" />
+				Force open state
+			</label>
+			<label>
+				<input type="checkbox" id="toggle-inline" />
+				Inline mode (fills container)
+			</label>
+		</aside>
 
-	<main>
-		<h1>Reading the docs</h1>
-		<p>This is the kind of page a real customer embeds the chat widget on — a content-heavy reading experience where the chat exists as a floating helper for visitors who need guidance.</p>
-		<p>Scroll the page while the widget is open. The widget should remain fixed in the bottom-right corner without the parent scroll affecting it in any way (no jank, no sticky-position drift, no layout shift).</p>
+		<main>
+			<h1>Reading the docs</h1>
+			<p>
+				This is the kind of page a real customer embeds the chat widget on — a content-heavy reading
+				experience where the chat exists as a floating helper for visitors who need guidance.
+			</p>
+			<p>
+				Scroll the page while the widget is open. The widget should remain fixed in the bottom-right
+				corner without the parent scroll affecting it in any way (no jank, no sticky-position drift,
+				no layout shift).
+			</p>
 
-		<h2>Parent form (focus trap test)</h2>
-		<div class="parent-form">
-			<label for="parent-input">Newsletter signup</label>
-			<input id="parent-input" class="field" placeholder="you@example.com" />
-			<p style="margin:0.5rem 0 0; font-size:0.85rem; color:#666;">Focusing this input should not affect the widget's own textarea focus.</p>
-		</div>
+			<h2>Parent form (focus trap test)</h2>
+			<div class="parent-form">
+				<label for="parent-input">Newsletter signup</label>
+				<input id="parent-input" class="field" placeholder="you@example.com" />
+				<p style="margin: 0.5rem 0 0; font-size: 0.85rem; color: #666">
+					Focusing this input should not affect the widget's own textarea focus.
+				</p>
+			</div>
 
-		<div class="spacer">scroll past me — 120vh of nothing</div>
+			<div class="spacer">scroll past me — 120vh of nothing</div>
 
-		<h2>More content</h2>
-		<p>The widget must survive all the ways a customer page can try to style <code>button</code>, <code>input</code>, <code>textarea</code>, and generic elements. Shadow DOM provides that isolation; the <code>:host { all: initial }</code> reset handles the remaining inherited-property leaks.</p>
-		<p>If you see any visual regression in the widget rendering while scrolling this page, something is wrong.</p>
+			<h2>More content</h2>
+			<p>
+				The widget must survive all the ways a customer page can try to style <code>button</code>,
+				<code>input</code>, <code>textarea</code>, and generic elements. Shadow DOM provides that
+				isolation; the <code>:host { all: initial }</code> reset handles the remaining
+				inherited-property leaks.
+			</p>
+			<p>
+				If you see any visual regression in the widget rendering while scrolling this page,
+				something is wrong.
+			</p>
 
-		<div class="spacer">even more empty space</div>
+			<div class="spacer">even more empty space</div>
 
-		<h2>End of content</h2>
-		<p>The chat widget should still be visible in the bottom-right, working as expected.</p>
-	</main>
+			<h2>End of content</h2>
+			<p>The chat widget should still be visible in the bottom-right, working as expected.</p>
+		</main>
 
-	<!--
+		<!--
 		The widget. In production the loader.js endpoint injects this automatically;
 		for local development we load the unversioned bundle directly and hand-place
 		the element with a configurable slug.
 	-->
-	<ragr-chat slug="chatlie"></ragr-chat>
-	<script type="module" src="/widget/ragr-chat.js"></script>
+		<ragr-chat slug="chatlie"></ragr-chat>
+		<script type="module" src="/widget/ragr-chat.js"></script>
 
-	<script>
-		// Hook up the harness toggles so you can exercise `open` and `inline`
-		// attribute reactivity without editing the HTML.
-		const el = document.querySelector('ragr-chat');
-		document.getElementById('toggle-open').addEventListener('change', (e) => {
-			if (e.target.checked) el.setAttribute('open', '');
-			else el.removeAttribute('open');
-		});
-		document.getElementById('toggle-inline').addEventListener('change', (e) => {
-			if (e.target.checked) el.setAttribute('inline', '');
-			else el.removeAttribute('inline');
-		});
-	</script>
-</body>
+		<script>
+			// Hook up the harness toggles so you can exercise `open` and `inline`
+			// attribute reactivity without editing the HTML.
+			const el = document.querySelector('ragr-chat');
+			document.getElementById('toggle-open').addEventListener('change', (e) => {
+				if (e.target.checked) el.setAttribute('open', '');
+				else el.removeAttribute('open');
+			});
+			document.getElementById('toggle-inline').addEventListener('change', (e) => {
+				if (e.target.checked) el.setAttribute('inline', '');
+				else el.removeAttribute('inline');
+			});
+		</script>
+	</body>
 </html>

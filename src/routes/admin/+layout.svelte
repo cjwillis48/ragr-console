@@ -29,22 +29,29 @@
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
-<div class="min-h-dvh bg-surface text-text overflow-x-hidden">
+<div class="min-h-dvh overflow-x-hidden bg-surface text-text">
 	<header class="border-b border-border px-4 py-3">
-		<div class="max-w-5xl mx-auto flex items-center justify-between">
-			<a href="/admin" class="text-lg font-semibold hover:text-accent transition-colors">RAGr Admin</a>
+		<div class="mx-auto flex max-w-5xl items-center justify-between">
+			<a href="/admin" class="text-lg font-semibold transition-colors hover:text-accent"
+				>RAGr Admin</a
+			>
 			<UserButton />
 		</div>
 	</header>
-	<main class="max-w-5xl mx-auto px-4 py-6">
+	<main class="mx-auto max-w-5xl px-4 py-6">
 		{#if ready}
 			{@render children()}
 		{:else}
 			<div class="text-text-muted">Loading...</div>
 		{/if}
 	</main>
-	<footer class="max-w-5xl mx-auto px-4 py-6 border-t border-border text-center text-sm text-text-muted">
-		Bug or feature request? <a href="mailto:contact@ragr.dev" class="hover:text-accent transition-colors">contact@ragr.dev</a>
+	<footer
+		class="mx-auto max-w-5xl border-t border-border px-4 py-6 text-center text-sm text-text-muted"
+	>
+		Bug or feature request? <a
+			href="mailto:contact@ragr.dev"
+			class="transition-colors hover:text-accent">contact@ragr.dev</a
+		>
 	</footer>
 </div>
 <Toast />

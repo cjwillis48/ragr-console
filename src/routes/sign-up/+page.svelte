@@ -9,6 +9,6 @@
 </svelte:head>
 
 <!-- Same rationale as sign-in: default to /admin, but preserve deep links. -->
-<div class="min-h-dvh bg-surface flex items-center justify-center">
+<div class="flex min-h-dvh items-center justify-center bg-surface">
 	<SignUp appearance={{ baseTheme: dark }} fallbackRedirectUrl="/admin" />
 </div>

@@ -15,7 +15,7 @@ function getClient(): Axiom | null {
 }
 
 function emit(level: LogLevel, data: Record<string, unknown>) {
-	const threshold = LOG_LEVELS[(env.LOG_LEVEL?.toLowerCase() as LogLevel)] ?? LOG_LEVELS.info;
+	const threshold = LOG_LEVELS[env.LOG_LEVEL?.toLowerCase() as LogLevel] ?? LOG_LEVELS.info;
 	if (LOG_LEVELS[level] < threshold) return;
 
 	const client = getClient();

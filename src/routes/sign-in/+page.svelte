@@ -14,6 +14,6 @@
 	page). Clerk still honors an explicit ?redirect_url= query param first,
 	so deep links into /admin/... survive the sign-in bounce correctly.
 -->
-<div class="min-h-dvh bg-surface flex items-center justify-center">
+<div class="flex min-h-dvh items-center justify-center bg-surface">
 	<SignIn appearance={{ baseTheme: dark }} fallbackRedirectUrl="/admin" />
 </div>

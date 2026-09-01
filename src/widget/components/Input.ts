@@ -81,21 +81,18 @@ export function Input(props: InputProps): ComponentChildren {
 					disabled=${props.disabled || !props.value.trim()}
 					aria-label="Send message"
 				>
-					${props.sending
-						? html`<span class="ragr-send-dots" aria-hidden="true">…</span>`
-						: html`<svg
-								viewBox="0 0 20 20"
-								class="ragr-send-icon"
-								fill="none"
-								aria-hidden="true"
-							>
-								<path
-									d="M2 10l16-7-7 16-2-7-7-2z"
-									stroke="currentColor"
-									stroke-width="1.6"
-									stroke-linejoin="round"
-								/>
-							</svg>`}
+					${
+						props.sending
+							? html`<span class="ragr-send-dots" aria-hidden="true">…</span>`
+							: html`<svg viewBox="0 0 20 20" class="ragr-send-icon" fill="none" aria-hidden="true">
+									<path
+										d="M2 10l16-7-7 16-2-7-7-2z"
+										stroke="currentColor"
+										stroke-width="1.6"
+										stroke-linejoin="round"
+									/>
+								</svg>`
+					}
 				</button>
 			</div>
 		</form>

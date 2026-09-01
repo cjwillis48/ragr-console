@@ -58,51 +58,55 @@ export function Panel(props: PanelProps): ComponentChildren {
 					${label ? html`<p class="ragr-subtitle">${label}</p>` : null}
 				</div>
 				<div class="ragr-header-actions">
-					${!props.inline
-						? html`
-								<button
-									type="button"
-									class="ragr-icon-btn ragr-expand-btn"
-									aria-label=${props.size === 'large' ? 'Shrink chat' : 'Expand chat'}
-									title=${props.size === 'large' ? 'Shrink' : 'Expand'}
-									onClick=${props.onToggleSize}
-								>
-									${props.size === 'large'
-										? html`<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-												<path
-													d="M9 2h5v5M7 14H2V9M14 2L9 7M2 14l5-5"
-													stroke="currentColor"
-													stroke-width="1.6"
-													stroke-linecap="round"
-												/>
-											</svg>`
-										: html`<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-												<path
-													d="M14 2h-5m5 0v5m0-5L9 7M2 14h5m-5 0V9m0 5l5-5"
-													stroke="currentColor"
-													stroke-width="1.6"
-													stroke-linecap="round"
-												/>
-											</svg>`}
-								</button>
-								<button
-									type="button"
-									class="ragr-icon-btn ragr-close-btn"
-									aria-label="Close chat"
-									title="Close"
-									onClick=${props.onClose}
-								>
-									<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-										<path
-											d="M3 3l10 10M13 3L3 13"
-											stroke="currentColor"
-											stroke-width="1.8"
-											stroke-linecap="round"
-										/>
-									</svg>
-								</button>
-							`
-						: null}
+					${
+						!props.inline
+							? html`
+									<button
+										type="button"
+										class="ragr-icon-btn ragr-expand-btn"
+										aria-label=${props.size === 'large' ? 'Shrink chat' : 'Expand chat'}
+										title=${props.size === 'large' ? 'Shrink' : 'Expand'}
+										onClick=${props.onToggleSize}
+									>
+										${
+											props.size === 'large'
+												? html`<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+													<path
+														d="M9 2h5v5M7 14H2V9M14 2L9 7M2 14l5-5"
+														stroke="currentColor"
+														stroke-width="1.6"
+														stroke-linecap="round"
+													/>
+												</svg>`
+												: html`<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+													<path
+														d="M14 2h-5m5 0v5m0-5L9 7M2 14h5m-5 0V9m0 5l5-5"
+														stroke="currentColor"
+														stroke-width="1.6"
+														stroke-linecap="round"
+													/>
+												</svg>`
+										}
+									</button>
+									<button
+										type="button"
+										class="ragr-icon-btn ragr-close-btn"
+										aria-label="Close chat"
+										title="Close"
+										onClick=${props.onClose}
+									>
+										<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+											<path
+												d="M3 3l10 10M13 3L3 13"
+												stroke="currentColor"
+												stroke-width="1.8"
+												stroke-linecap="round"
+											/>
+										</svg>
+									</button>
+								`
+							: null
+					}
 				</div>
 			</header>
 
@@ -114,9 +118,11 @@ export function Panel(props: PanelProps): ComponentChildren {
 			/>
 
 			${props.error ? html`<div class="ragr-error-bar">${props.error}</div>` : null}
-			${unavailable
-				? html`<div class="ragr-unavailable">This assistant is currently unavailable.</div>`
-				: null}
+			${
+				unavailable
+					? html`<div class="ragr-unavailable">This assistant is currently unavailable.</div>`
+					: null
+			}
 
 			<${Input}
 				value=${props.inputValue}

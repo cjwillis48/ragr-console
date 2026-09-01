@@ -78,7 +78,11 @@
 		animation: ragr-fadein 200ms ease;
 	}
 	@keyframes ragr-fadein {
-		from { opacity: 0; }
-		to   { opacity: 1; }
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 </style>

@@ -1,5 +1,28 @@
 import { env } from '$env/dynamic/public';
-import type { RagModel, RagModelCreate, RagModelUpdate, WidgetTheme, StatsResponse, DailyStatsEntry, TopSourceEntry, ConversationListResponse, ConversationDetailResponse, SourceListResponse, CreateSourceRequest, CreateSourceResponse, UpsertSourceRequest, UpsertSourceResponse, PresignResponse, ChunkListResponse, ChunkDetail, ApiKeyRead, ApiKeyCreateResponse, SystemPromptHistoryEntry, CurrentUser } from './admin-types';
+import type {
+	RagModel,
+	RagModelCreate,
+	RagModelUpdate,
+	WidgetTheme,
+	StatsResponse,
+	DailyStatsEntry,
+	TopSourceEntry,
+	ConversationListResponse,
+	ConversationDetailResponse,
+	SourceListResponse,
+	CreateSourceRequest,
+	CreateSourceResponse,
+	UpsertSourceRequest,
+	UpsertSourceResponse,
+	ReingestResponse,
+	PresignResponse,
+	ChunkListResponse,
+	ChunkDetail,
+	ApiKeyRead,
+	ApiKeyCreateResponse,
+	SystemPromptHistoryEntry,
+	CurrentUser
+} from './admin-types';
 
 const baseUrl = () => env.PUBLIC_RAGR_API_URL;
 
@@ -36,11 +59,12 @@ async function authedFetch(path: string, options: RequestInit = {}): Promise<Res
 		try {
 			const parsed = JSON.parse(body);
 			if (parsed.detail) {
-				detail = typeof parsed.detail === 'string'
-					? parsed.detail
-					: Array.isArray(parsed.detail)
-						? parsed.detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join('; ')
-						: JSON.stringify(parsed.detail);
+				detail =
+					typeof parsed.detail === 'string'
+						? parsed.detail
+						: Array.isArray(parsed.detail)
+							? parsed.detail.map((d: { msg?: string }) => d.msg || JSON.stringify(d)).join('; ')
+							: JSON.stringify(parsed.detail);
 			}
 		} catch {
 			// body wasn't JSON, fall through to generic error
@@ -89,7 +113,10 @@ export async function getTheme(slug: string): Promise<WidgetTheme> {
 }
 
 export async function updateTheme(slug: string, data: Partial<WidgetTheme>): Promise<WidgetTheme> {
-	const res = await authedFetch(`/models/${slug}/theme`, { method: 'PATCH', body: JSON.stringify(data) });
+	const res = await authedFetch(`/models/${slug}/theme`, {
+		method: 'PATCH',
+		body: JSON.stringify(data)
+	});
 	return res.json();
 }
 
@@ -110,7 +137,11 @@ export async function getTopSources(slug: string, limit = 10): Promise<TopSource
 }
 
 // Conversations
-export async function getConversations(slug: string, limit = 50, offset = 0): Promise<ConversationListResponse> {
+export async function getConversations(
+	slug: string,
+	limit = 50,
+	offset = 0
+): Promise<ConversationListResponse> {
 	const res = await authedFetch(`/models/${slug}/conversations?limit=${limit}&offset=${offset}`);
 	return res.json();
 }
@@ -119,34 +150,59 @@ export async function deleteConversation(slug: string, conversationId: number): 
 	await authedFetch(`/models/${slug}/conversations/${conversationId}`, { method: 'DELETE' });
 }
 
-export async function deleteMessage(slug: string, conversationId: number, messageId: number): Promise<void> {
-	await authedFetch(`/models/${slug}/conversations/${conversationId}/messages/${messageId}`, { method: 'DELETE' });
+export async function deleteMessage(
+	slug: string,
+	conversationId: number,
+	messageId: number
+): Promise<void> {
+	await authedFetch(`/models/${slug}/conversations/${conversationId}/messages/${messageId}`, {
+		method: 'DELETE'
+	});
 }
 
-export async function getConversationMessages(slug: string, conversationId: number): Promise<ConversationDetailResponse> {
+export async function getConversationMessages(
+	slug: string,
+	conversationId: number
+): Promise<ConversationDetailResponse> {
 	const res = await authedFetch(`/models/${slug}/conversations/${conversationId}/messages`);
 	return res.json();
 }
 
 // Crawl
-export async function crawlSite(slug: string, url: string, maxPages = 50, maxDepth = 3): Promise<{ status: string; message: string; pages_queued: number }> {
+export async function crawlSite(
+	slug: string,
+	url: string,
+	maxPages = 50,
+	maxDepth = 3
+): Promise<{ status: string; message: string; pages_queued: number }> {
 	const res = await authedFetch(`/models/${slug}/sources/crawl`, {
 		method: 'POST',
-		body: JSON.stringify({ url, max_pages: maxPages, max_depth: maxDepth }),
+		body: JSON.stringify({ url, max_pages: maxPages, max_depth: maxDepth })
 	});
 	return res.json();
 }
 
 // Sources
-export async function getSources(slug: string, limit = 50, offset = 0, search = ''): Promise<SourceListResponse> {
+export async function getSources(
+	slug: string,
+	limit = 50,
+	offset = 0,
+	search = ''
+): Promise<SourceListResponse> {
 	const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
 	if (search) params.set('search', search);
 	const res = await authedFetch(`/models/${slug}/sources?${params}`);
 	return res.json();
 }
 
-export async function createSource(slug: string, data: CreateSourceRequest): Promise<CreateSourceResponse> {
-	const res = await authedFetch(`/models/${slug}/sources`, { method: 'POST', body: JSON.stringify(data) });
+export async function createSource(
+	slug: string,
+	data: CreateSourceRequest
+): Promise<CreateSourceResponse> {
+	const res = await authedFetch(`/models/${slug}/sources`, {
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
 	return res.json();
 }
 
@@ -158,17 +214,23 @@ function encodeIdentifier(identifier: string): string {
 
 // Push raw content directly (synchronous ingest). Used for text/code sources.
 // POST /sources is URL-only; raw content must go through this PUT endpoint.
-export async function upsertSource(slug: string, identifier: string, data: UpsertSourceRequest): Promise<UpsertSourceResponse> {
+export async function upsertSource(
+	slug: string,
+	identifier: string,
+	data: UpsertSourceRequest
+): Promise<UpsertSourceResponse> {
 	const res = await authedFetch(`/models/${slug}/sources/${encodeIdentifier(identifier)}`, {
 		method: 'PUT',
-		body: JSON.stringify(data),
+		body: JSON.stringify(data)
 	});
 	return res.json();
 }
 
 // DELETE keys on source_identifier (file path / URL), not the integer row id.
 export async function deleteSource(slug: string, identifier: string): Promise<void> {
-	await authedFetch(`/models/${slug}/sources/${encodeIdentifier(identifier)}`, { method: 'DELETE' });
+	await authedFetch(`/models/${slug}/sources/${encodeIdentifier(identifier)}`, {
+		method: 'DELETE'
+	});
 }
 
 export async function getSourceChunks(slug: string, sourceId: number): Promise<ChunkListResponse> {
@@ -178,6 +240,24 @@ export async function getSourceChunks(slug: string, sourceId: number): Promise<C
 
 export async function getChunksByIds(slug: string, ids: number[]): Promise<ChunkDetail[]> {
 	const res = await authedFetch(`/models/${slug}/chunks?ids=${ids.join(',')}`);
+	return res.json();
+}
+
+// Rebuild through the current extraction + chunking pipeline. The backend picks
+// the mode per source: re-fetch when a source_url exists, else re-chunk stored
+// text. Returns 202 — work is queued, so callers should refresh the source list.
+export async function reingestSource(slug: string, identifier: string): Promise<ReingestResponse> {
+	const res = await authedFetch(
+		`/models/${slug}/sources/${encodeIdentifier(identifier)}/reingest`,
+		{
+			method: 'POST'
+		}
+	);
+	return res.json();
+}
+
+export async function reingestAllSources(slug: string): Promise<ReingestResponse> {
+	const res = await authedFetch(`/models/${slug}/sources/reingest`, { method: 'POST' });
 	return res.json();
 }
 
@@ -196,15 +276,22 @@ function validateFiles(files: FileList): void {
 	for (const file of files) {
 		const ext = file.name.toLowerCase().match(/\.[^.]+$/)?.[0] || '';
 		if (!ALLOWED_EXTENSIONS.includes(ext)) {
-			throw new Error(`Unsupported file type '${ext}' for "${file.name}". Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`);
+			throw new Error(
+				`Unsupported file type '${ext}' for "${file.name}". Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`
+			);
 		}
 		if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
-			throw new Error(`"${file.name}" exceeds ${MAX_UPLOAD_SIZE_MB}MB limit (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+			throw new Error(
+				`"${file.name}" exceeds ${MAX_UPLOAD_SIZE_MB}MB limit (${(file.size / 1024 / 1024).toFixed(1)}MB)`
+			);
 		}
 	}
 }
 
-export async function uploadSources(slug: string, files: FileList): Promise<CreateSourceResponse[]> {
+export async function uploadSources(
+	slug: string,
+	files: FileList
+): Promise<CreateSourceResponse[]> {
 	validateFiles(files);
 	// Try presigned R2 upload first
 	try {
@@ -219,7 +306,7 @@ export async function uploadSources(slug: string, files: FileList): Promise<Crea
 }
 
 async function uploadViaPresign(slug: string, files: FileList): Promise<CreateSourceResponse[]> {
-	const filesMeta = Array.from(files).map(f => ({
+	const filesMeta = Array.from(files).map((f) => ({
 		filename: f.name,
 		content_type: f.type || 'application/octet-stream'
 	}));
@@ -231,23 +318,26 @@ async function uploadViaPresign(slug: string, files: FileList): Promise<CreateSo
 	const presign: PresignResponse = await presignRes.json();
 
 	// Upload each file directly to R2
-	await Promise.all(presign.files.map(async (pf) => {
-		const file = Array.from(files).find(f => f.name === pf.filename);
-		if (!file) throw new Error(`File not found: ${pf.filename}`);
-		const uploadRes = await fetch(pf.upload_url, {
-			method: 'PUT',
-			headers: { 'Content-Type': pf.content_type },
-			body: file
-		});
-		if (!uploadRes.ok) throw new Error(`R2 upload failed for ${pf.filename} (${uploadRes.status})`);
-	}));
+	await Promise.all(
+		presign.files.map(async (pf) => {
+			const file = Array.from(files).find((f) => f.name === pf.filename);
+			if (!file) throw new Error(`File not found: ${pf.filename}`);
+			const uploadRes = await fetch(pf.upload_url, {
+				method: 'PUT',
+				headers: { 'Content-Type': pf.content_type },
+				body: file
+			});
+			if (!uploadRes.ok)
+				throw new Error(`R2 upload failed for ${pf.filename} (${uploadRes.status})`);
+		})
+	);
 
 	// Confirm uploads
 	const confirmRes = await authedFetch(`/models/${slug}/sources/upload/confirm`, {
 		method: 'POST',
 		body: JSON.stringify({
 			upload_id: presign.upload_id,
-			files: presign.files.map(pf => ({ filename: pf.filename, object_key: pf.object_key }))
+			files: presign.files.map((pf) => ({ filename: pf.filename, object_key: pf.object_key }))
 		})
 	});
 	return confirmRes.json();
@@ -298,8 +388,13 @@ export async function getSystemPromptHistory(slug: string): Promise<SystemPrompt
 	return res.json();
 }
 
-export async function rollbackSystemPrompt(slug: string, historyId: number): Promise<SystemPromptHistoryEntry> {
-	const res = await authedFetch(`/models/${slug}/system-prompt-history/${historyId}/rollback`, { method: 'POST' });
+export async function rollbackSystemPrompt(
+	slug: string,
+	historyId: number
+): Promise<SystemPromptHistoryEntry> {
+	const res = await authedFetch(`/models/${slug}/system-prompt-history/${historyId}/rollback`, {
+		method: 'POST'
+	});
 	return res.json();
 }
 
@@ -315,9 +410,9 @@ export async function streamGenerateSystemPrompt(
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			authorization: auth,
+			authorization: auth
 		},
-		body: JSON.stringify({ input_text: inputText }),
+		body: JSON.stringify({ input_text: inputText })
 	});
 	if (!res.ok) {
 		const body = await res.text();
@@ -325,7 +420,10 @@ export async function streamGenerateSystemPrompt(
 		return;
 	}
 	const reader = res.body?.getReader();
-	if (!reader) { onError('No response body'); return; }
+	if (!reader) {
+		onError('No response body');
+		return;
+	}
 	const decoder = new TextDecoder();
 	let buffer = '';
 	while (true) {
@@ -352,7 +450,9 @@ export async function streamGenerateSystemPrompt(
 						onError(parsed.error);
 						return;
 					}
-				} catch { /* skip malformed */ }
+				} catch {
+					/* skip malformed */
+				}
 			}
 		}
 	}
@@ -366,7 +466,7 @@ export async function acceptGeneratedPrompt(
 ): Promise<SystemPromptHistoryEntry> {
 	const res = await authedFetch(`/models/${slug}/system-prompt-history/accept-generated`, {
 		method: 'POST',
-		body: JSON.stringify({ prompt_text: promptText, input_text: inputText }),
+		body: JSON.stringify({ prompt_text: promptText, input_text: inputText })
 	});
 	return res.json();
 }

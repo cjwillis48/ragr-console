@@ -20,9 +20,11 @@ export interface LauncherProps {
 export function Launcher(props: LauncherProps): ComponentChildren {
 	return html`
 		<div class="ragr-launcher-wrap">
-			${props.showHint && props.hintText
-				? html`<div class="ragr-launcher-hint" role="status">${props.hintText}</div>`
-				: null}
+			${
+				props.showHint && props.hintText
+					? html`<div class="ragr-launcher-hint" role="status">${props.hintText}</div>`
+					: null
+			}
 			<button
 				type="button"
 				class="ragr-launcher-btn"
