@@ -128,6 +128,9 @@
 	let addingSource = $state(false);
 	let fileInput = $state<HTMLInputElement>();
 	let sourcePollTimer: ReturnType<typeof setInterval> | null = null;
+	// Statuses the backend never moves off on its own — anything else means
+	// work is still in flight and the poll must keep going.
+	const TERMINAL_SOURCE_STATUSES = new Set(['complete', 'error', 'failed']);
 
 	// Widget theme
 	let theme = $state<WidgetTheme>({});
@@ -234,7 +237,7 @@
 				const res = await getSources(slug, SOURCES_PER_PAGE, sourcesOffset, sourcesSearch);
 				sources = res.sources;
 				sourcesTotal = res.total;
-				const allDone = sources.every((s) => s.status === 'complete' || s.status === 'error');
+				const allDone = sources.every((s) => TERMINAL_SOURCE_STATUSES.has(s.status));
 				if (allDone && !keepAlive) {
 					stopSourcePolling();
 				} else if (allDone && keepAlive) {
@@ -729,7 +732,8 @@
 					: 'Rebuilding source from stored content',
 				'success'
 			);
-			await loadTab('sources');
+			await loadSourcesPage(sourcesOffset);
+			startSourcePolling();
 		} catch (e: unknown) {
 			addToast(e instanceof Error ? e.message : 'Failed to rebuild source', 'error');
 		} finally {
@@ -751,7 +755,8 @@
 			const res = await reingestAllSources(slug);
 			const skipped = res.skipped ? `, ${res.skipped} skipped` : '';
 			addToast(`Queued ${res.queued} source${res.queued === 1 ? '' : 's'}${skipped}`, 'success');
-			await loadTab('sources');
+			await loadSourcesPage(sourcesOffset);
+			startSourcePolling();
 		} catch (e: unknown) {
 			addToast(e instanceof Error ? e.message : 'Failed to rebuild sources', 'error');
 		} finally {
