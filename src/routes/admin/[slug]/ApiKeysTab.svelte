@@ -101,13 +101,10 @@
 	</p>
 
 	<!-- Scope info -->
-	<div
-		class="space-y-2 rounded-lg border border-border bg-surface-alt p-4 text-xs text-text-muted"
-	>
+	<div class="space-y-2 rounded-lg border border-border bg-surface-alt p-4 text-xs text-text-muted">
 		<p class="font-medium text-text">
-			Per-model keys are scoped to <span class="font-mono text-accent"
-				>/models/{model.slug}</span
-			> endpoints only.
+			Per-model keys are scoped to <span class="font-mono text-accent">/models/{model.slug}</span> endpoints
+			only.
 		</p>
 		<p>
 			A key for this model cannot access other models. Using it on a different slug returns <span
@@ -145,9 +142,7 @@
 	{#if newlyCreatedKey}
 		<div class="space-y-2 rounded-lg border border-green-500/30 bg-green-500/10 p-4">
 			<div class="flex items-center justify-between">
-				<span class="text-sm font-medium text-green-400"
-					>Key created: {newlyCreatedKey.label}</span
-				>
+				<span class="text-sm font-medium text-green-400">Key created: {newlyCreatedKey.label}</span>
 				<button
 					onclick={() => (newlyCreatedKey = null)}
 					disabled={!keyCopied}

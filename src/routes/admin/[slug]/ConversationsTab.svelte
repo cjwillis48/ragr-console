@@ -9,11 +9,7 @@
 		getConversationMessages,
 		getConversations
 	} from '$lib/admin-api';
-	import type {
-		ChunkDetail,
-		ConversationSummaryResponse,
-		MessageResponse
-	} from '$lib/admin-types';
+	import type { ChunkDetail, ConversationSummaryResponse, MessageResponse } from '$lib/admin-types';
 	import { chunkRetrievalMethod, sortChunkRefs } from '$lib/admin-types';
 	import { addToast } from '$lib/toast.svelte';
 
@@ -269,9 +265,7 @@
 														<span class="text-[10px] text-text-muted">
 															dist: {ref.distance.toFixed(3)}{ref.rerank_score != null
 																? ` · rerank: ${ref.rerank_score.toFixed(3)}`
-																: ''}{ref.keyword_rank != null
-																? ` · kw: ${ref.keyword_rank}`
-																: ''}
+																: ''}{ref.keyword_rank != null ? ` · kw: ${ref.keyword_rank}` : ''}
 														</span>
 													</div>
 													<pre

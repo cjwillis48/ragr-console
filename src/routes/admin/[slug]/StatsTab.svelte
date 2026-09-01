@@ -152,10 +152,7 @@
 									class="min-h-0.5 rounded-t-sm bg-sky-400"
 									style="height: {(inPct / pct) * 100}%;"
 								></div>
-								<div
-									class="min-h-0.5 bg-indigo-500"
-									style="height: {(outPct / pct) * 100}%;"
-								></div>
+								<div class="min-h-0.5 bg-indigo-500" style="height: {(outPct / pct) * 100}%;"></div>
 							</div>
 						{:else}
 							<div class="rounded-t-sm bg-border/30" style="height: 2px;"></div>
