@@ -41,7 +41,10 @@ vite.widget.config.js.timestamp-*
 vite.widget.config.ts.timestamp-*
 
 # Claude
-.claude/
+# Ignore .claude/ contents by default (local notes, settings.local.json),
+# but track the shared hook/permission config.
+.claude/*
+!.claude/settings.json
 
 # Squirrel parking lot (local idea capture)
 .squirrel/

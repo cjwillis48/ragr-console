@@ -16,5 +16,4 @@ declare global {
 export const API_BASE: string =
 	(import.meta.env.PUBLIC_RAGR_API_URL as string) || 'http://localhost:8000';
 
-export const WIDGET_VERSION: string =
-	(import.meta.env.WIDGET_VERSION as string) || 'dev';
+export const WIDGET_VERSION: string = (import.meta.env.WIDGET_VERSION as string) || 'dev';

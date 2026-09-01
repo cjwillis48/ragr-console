@@ -146,27 +146,35 @@ export function MessageList(props: MessageListProps): ComponentChildren {
 					return html`
 						<div key=${msg.id} class="ragr-row ragr-row-bot">
 							<div class="ragr-bubble-group">
-								<div
-									class=${`ragr-bubble ragr-bubble-bot${isError ? ' ragr-bubble-error' : ''}`}
-								>
-									${msg.content
-										? html`<div
-												class="ragr-markdown"
-												dangerouslySetInnerHTML=${{ __html: renderMarkdown(msg.content) }}
-											/>`
-										: msg.isStreaming
-											? // Dot spans are deliberately on a single line — htm preserves
-												// whitespace-only text nodes between element children, and those
-												// become anonymous flex items in an inline-flex container, which
-												// visibly offsets the dots.
-												html`<span class="ragr-typing" role="status" aria-label="Assistant is typing"><span class="ragr-typing-dot"></span><span class="ragr-typing-dot"></span><span class="ragr-typing-dot"></span></span>`
-											: null}
+								<div class=${`ragr-bubble ragr-bubble-bot${isError ? ' ragr-bubble-error' : ''}`}>
+									${
+										msg.content
+											? html`<div
+													class="ragr-markdown"
+													dangerouslySetInnerHTML=${{ __html: renderMarkdown(msg.content) }}
+												/>`
+											: msg.isStreaming
+												? // Dot spans are deliberately on a single line — htm preserves
+													// whitespace-only text nodes between element children, and those
+													// become anonymous flex items in an inline-flex container, which
+													// visibly offsets the dots.
+													html`<span
+														class="ragr-typing"
+														role="status"
+														aria-label="Assistant is typing"
+														><span class="ragr-typing-dot"></span
+														><span class="ragr-typing-dot"></span
+														><span class="ragr-typing-dot"></span
+													></span>`
+												: null
+									}
 								</div>
-								${suggestions.length > 0
-									? html`
-											<div class="ragr-suggestions">
-												${suggestions.map(
-													(text) => html`
+								${
+									suggestions.length > 0
+										? html`
+												<div class="ragr-suggestions">
+													${suggestions.map(
+														(text) => html`
 														<button
 															type="button"
 															class="ragr-suggestion"
@@ -175,36 +183,39 @@ export function MessageList(props: MessageListProps): ComponentChildren {
 															${text}
 														</button>
 													`
-												)}
-											</div>
-										`
-									: null}
+													)}
+												</div>
+											`
+										: null
+								}
 							</div>
 						</div>
 					`;
 				})}
 			</div>
-			${userDetached
-				? html`
-						<button
-							type="button"
-							class="ragr-jump-to-bottom"
-							aria-label="Scroll to latest messages"
-							title="Jump to latest"
-							onClick=${handleJumpClick}
-						>
-							<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-								<path
-									d="M3 6l5 5 5-5"
-									stroke="currentColor"
-									stroke-width="1.8"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
-						</button>
-					`
-				: null}
+			${
+				userDetached
+					? html`
+							<button
+								type="button"
+								class="ragr-jump-to-bottom"
+								aria-label="Scroll to latest messages"
+								title="Jump to latest"
+								onClick=${handleJumpClick}
+							>
+								<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+									<path
+										d="M3 6l5 5 5-5"
+										stroke="currentColor"
+										stroke-width="1.8"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									/>
+								</svg>
+							</button>
+						`
+					: null
+			}
 		</div>
 	`;
 }

@@ -63,13 +63,7 @@ export function applyThemeVars(host: HTMLElement, theme: WidgetTheme): void {
 	s.setProperty('--ragr-font', resolved.font);
 	// Derived border token — 20% of the text color blended with transparent.
 	// Used by panel borders, bubble borders, and input outlines.
-	s.setProperty(
-		'--ragr-border',
-		`color-mix(in srgb, ${resolved.text} 20%, transparent)`
-	);
+	s.setProperty('--ragr-border', `color-mix(in srgb, ${resolved.text} 20%, transparent)`);
 	// Soft fill for suggestion pills and input backgrounds.
-	s.setProperty(
-		'--ragr-soft-fill',
-		`color-mix(in srgb, ${resolved.text} 10%, ${resolved.bg})`
-	);
+	s.setProperty('--ragr-soft-fill', `color-mix(in srgb, ${resolved.text} 10%, ${resolved.bg})`);
 }

@@ -54,10 +54,7 @@ export function App(props: AppProps): ComponentChildren {
 		let cancelled = false;
 		setLoadError(null);
 		setModelInfo(null);
-		Promise.all([
-			fetchModelInfo(props.slug, props.apiBase),
-			fetchTheme(props.slug, props.apiBase)
-		])
+		Promise.all([fetchModelInfo(props.slug, props.apiBase), fetchTheme(props.slug, props.apiBase)])
 			.then(([info, themeData]) => {
 				if (cancelled) return;
 				setModelInfo(info);
@@ -225,34 +222,36 @@ export function App(props: AppProps): ComponentChildren {
 
 	return html`
 		<div class="ragr-root" data-open=${isOpen ? 'true' : 'false'}>
-			${isOpen
-				? html`
-						<${Panel}
-							modelInfo=${modelInfo}
-							theme=${effectiveTheme}
-							messages=${chat.messages}
-							sampleMessages=${sampleMessages}
-							showSampleMessagesInGreeting=${showSampleMessagesInGreeting}
-							inputValue=${inputValue}
-							isSending=${chat.isSending}
-							error=${chat.error}
-							size=${size}
-							inline=${false}
-							onInput=${setInputValue}
-							onSubmit=${handleSubmit}
-							onSuggestion=${handleSuggestion}
-							onClose=${handleClose}
-							onToggleSize=${handleToggleSize}
-						/>
-					`
-				: html`
-						<${Launcher}
-							hintText=${effectiveTheme.launcher_hint?.trim() || ''}
-							showHint=${showHint}
-							modelName=${modelInfo.name}
-							onOpen=${handleOpen}
-						/>
-					`}
+			${
+				isOpen
+					? html`
+							<${Panel}
+								modelInfo=${modelInfo}
+								theme=${effectiveTheme}
+								messages=${chat.messages}
+								sampleMessages=${sampleMessages}
+								showSampleMessagesInGreeting=${showSampleMessagesInGreeting}
+								inputValue=${inputValue}
+								isSending=${chat.isSending}
+								error=${chat.error}
+								size=${size}
+								inline=${false}
+								onInput=${setInputValue}
+								onSubmit=${handleSubmit}
+								onSuggestion=${handleSuggestion}
+								onClose=${handleClose}
+								onToggleSize=${handleToggleSize}
+							/>
+						`
+					: html`
+							<${Launcher}
+								hintText=${effectiveTheme.launcher_hint?.trim() || ''}
+								showHint=${showHint}
+								modelName=${modelInfo.name}
+								onOpen=${handleOpen}
+							/>
+						`
+			}
 		</div>
 	`;
 }

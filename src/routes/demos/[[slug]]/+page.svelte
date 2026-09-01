@@ -10,9 +10,7 @@
 
 	// Always derive from URL — clicking a sidebar item navigates via goto(),
 	// which updates page.params.slug, which updates this. No local state.
-	const selectedSlug = $derived(
-		page.params.slug || data.models[0]?.slug || null
-	);
+	const selectedSlug = $derived(page.params.slug || data.models[0]?.slug || null);
 
 	function selectModel(slug: string) {
 		if (slug === selectedSlug) return;
@@ -22,26 +20,28 @@
 	onMount(() => {
 		if (!browser) return;
 		void loadRagrWidgetBundle()
-			.then(() => { widgetReady = true; })
+			.then(() => {
+				widgetReady = true;
+			})
 			.catch(() => {});
 	});
 </script>
 
 <svelte:head>
-	<title>{data.models.find(m => m.slug === selectedSlug)?.name || 'Demos'} — RAGr Demos</title>
+	<title>{data.models.find((m) => m.slug === selectedSlug)?.name || 'Demos'} — RAGr Demos</title>
 	<meta
 		name="description"
-		content={data.models.find(m => m.slug === selectedSlug)?.description
-			|| 'Live demos of AI assistants built with RAGr — each one is a production chat widget grounded in real data, the same widget you can embed in your own site.'}
+		content={data.models.find((m) => m.slug === selectedSlug)?.description ||
+			'Live demos of AI assistants built with RAGr — each one is a production chat widget grounded in real data, the same widget you can embed in your own site.'}
 	/>
 	<meta
 		property="og:title"
-		content={`${data.models.find(m => m.slug === selectedSlug)?.name || 'Demos'} — RAGr Demos`}
+		content={`${data.models.find((m) => m.slug === selectedSlug)?.name || 'Demos'} — RAGr Demos`}
 	/>
 	<meta
 		property="og:description"
-		content={data.models.find(m => m.slug === selectedSlug)?.description
-			|| 'Live demos of AI assistants built with RAGr — each one is a production chat widget grounded in real data, the same widget you can embed in your own site.'}
+		content={data.models.find((m) => m.slug === selectedSlug)?.description ||
+			'Live demos of AI assistants built with RAGr — each one is a production chat widget grounded in real data, the same widget you can embed in your own site.'}
 	/>
 	<meta
 		property="og:url"
@@ -124,7 +124,10 @@
 		height: 100dvh;
 		background: #0f172a;
 		color: #e2e8f0;
-		font-family: system-ui, -apple-system, sans-serif;
+		font-family:
+			system-ui,
+			-apple-system,
+			sans-serif;
 	}
 
 	/* ---- Sidebar (desktop) ---- */
@@ -152,7 +155,9 @@
 		color: inherit;
 		text-decoration: none;
 	}
-	.brand-accent { color: #6366f1; }
+	.brand-accent {
+		color: #6366f1;
+	}
 
 	.sidebar-title {
 		font-size: 0.8rem;
@@ -173,7 +178,9 @@
 		text-align: left;
 		cursor: pointer;
 		border-left: 3px solid transparent;
-		transition: background 160ms ease, border-color 160ms ease;
+		transition:
+			background 160ms ease,
+			border-color 160ms ease;
 		font: inherit;
 	}
 	.sidebar-item:hover {

@@ -28,9 +28,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		})
 	);
 
-	const models = results.filter(
-		(m): m is DemoModel => m !== null && m.accepting_requests
-	);
+	const models = results.filter((m): m is DemoModel => m !== null && m.accepting_requests);
 
 	return {
 		models,

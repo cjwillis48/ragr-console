@@ -4,9 +4,5 @@
 	"description": "A fixture model for Playwright tests.",
 	"allowed_origins": ["http://localhost:4173"],
 	"accepting_requests": true,
-	"sample_questions": [
-		"What can you help me with?",
-		"How do refunds work?",
-		"Where are the docs?"
-	]
+	"sample_questions": ["What can you help me with?", "How do refunds work?", "Where are the docs?"]
 }

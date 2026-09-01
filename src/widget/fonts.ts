@@ -42,7 +42,8 @@ export function ensureGoogleFont(family: string | null | undefined): void {
 	if (SYSTEM_FONTS.has(trimmed)) return;
 
 	// Safety cap — don't inject more than MAX_LOADED_FONTS external stylesheets.
-	const externalCount = loadedFonts.size - [...loadedFonts].filter((f) => SYSTEM_FONTS.has(f)).length;
+	const externalCount =
+		loadedFonts.size - [...loadedFonts].filter((f) => SYSTEM_FONTS.has(f)).length;
 	if (externalCount > MAX_LOADED_FONTS) return;
 
 	const link = document.createElement('link');

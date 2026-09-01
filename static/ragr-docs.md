@@ -23,30 +23,39 @@ RAGr is built for developers and teams who want to add AI-powered Q&A to their p
 ## Key Features
 
 ### Multi-tenant isolation
+
 Every model gets its own knowledge base, configuration, and conversation history. Your customers' data never crosses boundaries. Create as many models as you need for different use cases, clients, or environments.
 
 ### Managed RAG pipeline
+
 You don't need to worry about chunking strategies, embedding models, or vector databases. Upload your content and RAGr handles the entire retrieval pipeline — from ingestion to search to response generation.
 
 ### Embeddable chat widget
+
 Drop a fully themed chat widget into any website with a single line of code. The widget supports custom colors, fonts, welcome messages, and suggested questions. It works on any site — just paste the iframe embed code.
 
 ### REST API
+
 For full control, use the RAGr API directly. It's a simple REST interface with server-sent events (SSE) for real-time streaming responses. No SDK required — integrate from any language or framework.
 
 ### Source management
+
 Add content from multiple source types:
+
 - **File uploads** — PDFs, text files, markdown, and more
 - **URL crawling** — point RAGr at a URL and we'll crawl and index the content
 - View how your content is chunked and indexed
 
 ### Usage tracking and budgets
+
 Set token budgets per model to control costs. Monitor usage stats and review full conversation logs to understand how your AI assistants are being used.
 
 ### Conversation history
+
 Every conversation is logged with full message history, token counts, and response metadata. Review conversations to understand user needs and improve your knowledge base.
 
 ### Reranking
+
 RAGr supports reranking to improve retrieval quality. Retrieved chunks are re-scored for relevance before being sent to the LLM, so your assistant gives more accurate answers.
 
 ## Pricing

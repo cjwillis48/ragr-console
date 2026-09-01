@@ -20,9 +20,7 @@ async function load(page: Page, mockOpts: Parameters<typeof mockRagrApi>[1] = {}
 async function waitForLoaded(page: Page) {
 	// The Preact tree only mounts after fetchModelInfo + fetchTheme resolve,
 	// so we wait for the launcher button to become visible.
-	await expect(
-		page.locator('ragr-chat').locator('.ragr-launcher-btn')
-	).toBeVisible();
+	await expect(page.locator('ragr-chat').locator('.ragr-launcher-btn')).toBeVisible();
 }
 
 test.describe('widget loading', () => {
@@ -113,14 +111,14 @@ test.describe('streaming chat flow', () => {
 		await textarea.press('Enter');
 
 		// User bubble appears immediately.
-		await expect(
-			page.locator('ragr-chat').locator('.ragr-bubble-user').last()
-		).toContainText('How does this work?');
+		await expect(page.locator('ragr-chat').locator('.ragr-bubble-user').last()).toContainText(
+			'How does this work?'
+		);
 
 		// Final streamed answer is the concatenation of deltas.
-		await expect(
-			page.locator('ragr-chat').locator('.ragr-bubble-bot').last()
-		).toContainText('Hello from the fixture stream.');
+		await expect(page.locator('ragr-chat').locator('.ragr-bubble-bot').last()).toContainText(
+			'Hello from the fixture stream.'
+		);
 	});
 
 	test('500 on chat endpoint surfaces an error bar', async ({ page }) => {
@@ -129,9 +127,7 @@ test.describe('streaming chat flow', () => {
 		await page.locator('ragr-chat').locator('.ragr-launcher-btn').click();
 		await page.locator('ragr-chat').locator('.ragr-textarea').fill('test');
 		await page.locator('ragr-chat').locator('.ragr-textarea').press('Enter');
-		await expect(
-			page.locator('ragr-chat').locator('.ragr-error-bar')
-		).toBeVisible();
+		await expect(page.locator('ragr-chat').locator('.ragr-error-bar')).toBeVisible();
 	});
 
 	test('no status badges are rendered even on off_topic responses', async ({ page }) => {
@@ -142,9 +138,9 @@ test.describe('streaming chat flow', () => {
 		await page.locator('ragr-chat').locator('.ragr-launcher-btn').click();
 		await page.locator('ragr-chat').locator('.ragr-textarea').fill('weather?');
 		await page.locator('ragr-chat').locator('.ragr-textarea').press('Enter');
-		await expect(
-			page.locator('ragr-chat').locator('.ragr-bubble-bot').last()
-		).toContainText('I can only help');
+		await expect(page.locator('ragr-chat').locator('.ragr-bubble-bot').last()).toContainText(
+			'I can only help'
+		);
 		// Explicitly assert there are NO status badges anywhere in the shadow.
 		const badgeCount = await page
 			.locator('ragr-chat')
@@ -169,9 +165,9 @@ test.describe('suggested questions', () => {
 		await waitForLoaded(page);
 		await page.locator('ragr-chat').locator('.ragr-launcher-btn').click();
 		await page.locator('ragr-chat').locator('.ragr-suggestion').first().click();
-		await expect(
-			page.locator('ragr-chat').locator('.ragr-bubble-user').last()
-		).toContainText('What can you help me with?');
+		await expect(page.locator('ragr-chat').locator('.ragr-bubble-user').last()).toContainText(
+			'What can you help me with?'
+		);
 	});
 
 	test('suggestions reappear after an off-topic response', async ({ page }) => {
@@ -183,15 +179,12 @@ test.describe('suggested questions', () => {
 		await page.locator('ragr-chat').locator('.ragr-textarea').fill('random');
 		await page.locator('ragr-chat').locator('.ragr-textarea').press('Enter');
 		// Wait for the bot response to arrive, then check suggestions reappear.
-		await expect(
-			page.locator('ragr-chat').locator('.ragr-bubble-bot').last()
-		).toContainText('Outside my scope');
+		await expect(page.locator('ragr-chat').locator('.ragr-bubble-bot').last()).toContainText(
+			'Outside my scope'
+		);
 		// The first bot message (greeting) still has its suggestions, and the
 		// off-topic response should also have them beneath it, totaling 6.
-		const pillCount = await page
-			.locator('ragr-chat')
-			.locator('.ragr-suggestion')
-			.count();
+		const pillCount = await page.locator('ragr-chat').locator('.ragr-suggestion').count();
 		expect(pillCount).toBeGreaterThanOrEqual(3);
 	});
 });
@@ -209,10 +202,7 @@ test.describe('keyboard', () => {
 		const value = await textarea.inputValue();
 		expect(value).toContain('line one');
 		expect(value).toContain('line two');
-		const userBubbleCount = await page
-			.locator('ragr-chat')
-			.locator('.ragr-bubble-user')
-			.count();
+		const userBubbleCount = await page.locator('ragr-chat').locator('.ragr-bubble-user').count();
 		expect(userBubbleCount).toBe(0);
 	});
 });
@@ -243,9 +233,9 @@ test.describe('theme application', () => {
 	test('custom theme colors apply as CSS custom properties on host', async ({ page }) => {
 		await load(page);
 		await waitForLoaded(page);
-		const primary = await page.locator('ragr-chat').evaluate(
-			(el) => getComputedStyle(el).getPropertyValue('--ragr-primary').trim()
-		);
+		const primary = await page
+			.locator('ragr-chat')
+			.evaluate((el) => getComputedStyle(el).getPropertyValue('--ragr-primary').trim());
 		// Fixture uses #ff6600.
 		expect(primary.toLowerCase()).toBe('#ff6600');
 	});
@@ -259,10 +249,7 @@ test.describe('theme application', () => {
 });
 
 test.describe('mobile viewport', () => {
-	test('panel fills screen on mobile and expand button is hidden', async ({
-		page,
-		isMobile
-	}) => {
+	test('panel fills screen on mobile and expand button is hidden', async ({ page, isMobile }) => {
 		test.skip(!isMobile, 'only runs in mobile project');
 		await load(page);
 		await waitForLoaded(page);
@@ -282,9 +269,7 @@ test.describe('mobile viewport', () => {
 		// Expand button is rendered in the DOM but hidden via the
 		// `@media (max-width: 640px) { .ragr-expand-btn { display: none } }`
 		// rule in src/widget/styles.ts, so assert visibility not presence.
-		await expect(
-			page.locator('ragr-chat').locator('.ragr-expand-btn')
-		).toBeHidden();
+		await expect(page.locator('ragr-chat').locator('.ragr-expand-btn')).toBeHidden();
 	});
 });
 
@@ -318,10 +303,7 @@ test.describe('shadow DOM isolation', () => {
 });
 
 test.describe('parent scroll isolation', () => {
-	test('scrolling the parent page does not affect widget position', async ({
-		page,
-		isMobile
-	}) => {
+	test('scrolling the parent page does not affect widget position', async ({ page, isMobile }) => {
 		test.skip(isMobile, 'desktop only');
 		await load(page);
 		await waitForLoaded(page);

@@ -18,9 +18,7 @@ export default defineConfig({
 		'import.meta.env.PUBLIC_RAGR_API_URL': JSON.stringify(
 			process.env.PUBLIC_RAGR_API_URL || 'http://localhost:8000'
 		),
-		'import.meta.env.WIDGET_VERSION': JSON.stringify(
-			process.env.WIDGET_VERSION || 'dev'
-		)
+		'import.meta.env.WIDGET_VERSION': JSON.stringify(process.env.WIDGET_VERSION || 'dev')
 	},
 	build: {
 		lib: {

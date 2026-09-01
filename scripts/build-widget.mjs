@@ -15,7 +15,9 @@ if (!version) {
 	try {
 		version = execSync('git rev-parse --short HEAD', {
 			stdio: ['ignore', 'pipe', 'ignore']
-		}).toString().trim();
+		})
+			.toString()
+			.trim();
 	} catch {
 		version = 'dev';
 	}
