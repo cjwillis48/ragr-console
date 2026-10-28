@@ -23,8 +23,34 @@ import type {
 	SystemPromptHistoryEntry,
 	CurrentUser
 } from './admin-types';
+import { report } from './log';
 
 const baseUrl = () => env.PUBLIC_RAGR_API_URL;
+
+/**
+ * Every admin call is browser -> RAGR API with no server hop in between, so a
+ * failure here is invisible to `hooks.server.ts`. Reporting it from the call
+ * site is the only way it reaches Axiom.
+ *
+ * 4xx is split off as `warn` because it is usually validation or an expired
+ * token; `level == "error"` stays meaningful enough to alert on.
+ */
+function reportApiFailure(info: {
+	method: string;
+	path: string;
+	message: string;
+	startedAt: number;
+	status?: number;
+	event?: string;
+}) {
+	report(info.status && info.status < 500 ? 'warn' : 'error', info.message, {
+		event: info.event ?? 'admin_api_failure',
+		api_method: info.method,
+		api_path: info.path,
+		status: info.status,
+		duration_ms: Math.round(performance.now() - info.startedAt)
+	});
+}
 
 let _getToken: (() => Promise<string | null>) | null = null;
 
@@ -41,15 +67,35 @@ async function getAuthHeader(): Promise<string> {
 
 async function authedFetch(path: string, options: RequestInit = {}): Promise<Response> {
 	const auth = await getAuthHeader();
-	const res = await fetch(`${baseUrl()}${path}`, {
-		...options,
-		headers: {
-			'Content-Type': 'application/json',
-			authorization: auth,
-			...options.headers
-		}
-	});
+	const method = options.method ?? 'GET';
+	const startedAt = performance.now();
+
+	let res: Response;
+	try {
+		res = await fetch(`${baseUrl()}${path}`, {
+			...options,
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: auth,
+				...options.headers
+			}
+		});
+	} catch (e) {
+		// fetch only rejects on transport failure — offline, DNS, TLS, or a
+		// CORS rejection. None of those reach the API's own logs, so this is
+		// the only place they can be recorded.
+		reportApiFailure({
+			method,
+			path,
+			message: e instanceof Error ? e.message : String(e),
+			startedAt,
+			event: 'admin_api_unreachable'
+		});
+		throw e;
+	}
+
 	if (res.status === 401) {
+		reportApiFailure({ method, path, message: 'Unauthorized', startedAt, status: 401 });
 		throw new Error('Unauthorized — please sign in again');
 	}
 	if (!res.ok) {
@@ -69,6 +115,13 @@ async function authedFetch(path: string, options: RequestInit = {}): Promise<Res
 		} catch {
 			// body wasn't JSON, fall through to generic error
 		}
+		reportApiFailure({
+			method,
+			path,
+			message: detail || body.slice(0, 500) || res.statusText,
+			startedAt,
+			status: res.status
+		});
 		throw new Error(detail || `${res.status}: ${body}`);
 	}
 	return res;
@@ -107,8 +160,19 @@ export async function deleteModel(slug: string): Promise<void> {
 
 // Theme
 export async function getTheme(slug: string): Promise<WidgetTheme> {
-	const res = await fetch(`${baseUrl()}/models/${slug}/theme`);
-	if (!res.ok) throw new Error(`Failed to load theme (${res.status})`);
+	const path = `/models/${slug}/theme`;
+	const startedAt = performance.now();
+	const res = await fetch(`${baseUrl()}${path}`);
+	if (!res.ok) {
+		reportApiFailure({
+			method: 'GET',
+			path,
+			message: `Failed to load theme (${res.status})`,
+			startedAt,
+			status: res.status
+		});
+		throw new Error(`Failed to load theme (${res.status})`);
+	}
 	return res.json();
 }
 
@@ -322,13 +386,26 @@ async function uploadViaPresign(slug: string, files: FileList): Promise<CreateSo
 		presign.files.map(async (pf) => {
 			const file = Array.from(files).find((f) => f.name === pf.filename);
 			if (!file) throw new Error(`File not found: ${pf.filename}`);
+			const startedAt = performance.now();
 			const uploadRes = await fetch(pf.upload_url, {
 				method: 'PUT',
 				headers: { 'Content-Type': pf.content_type },
 				body: file
 			});
-			if (!uploadRes.ok)
+			if (!uploadRes.ok) {
+				// Goes straight to R2, so neither this app's logs nor the API's
+				// see it. Path is the API-side route, not the signed URL, which
+				// carries credentials.
+				reportApiFailure({
+					method: 'PUT',
+					path: `/models/${slug}/sources/upload/presign`,
+					message: `R2 upload failed for ${pf.filename}`,
+					startedAt,
+					status: uploadRes.status,
+					event: 'r2_upload_failure'
+				});
 				throw new Error(`R2 upload failed for ${pf.filename} (${uploadRes.status})`);
+			}
 		})
 	);
 
@@ -349,12 +426,23 @@ async function uploadViaMultipart(slug: string, files: FileList): Promise<Create
 	for (const file of files) {
 		formData.append('files', file);
 	}
-	const res = await fetch(`${baseUrl()}/models/${slug}/sources/upload`, {
+	const path = `/models/${slug}/sources/upload`;
+	const startedAt = performance.now();
+	const res = await fetch(`${baseUrl()}${path}`, {
 		method: 'POST',
 		headers: { authorization: auth },
 		body: formData
 	});
-	if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+	if (!res.ok) {
+		reportApiFailure({
+			method: 'POST',
+			path,
+			message: `Upload failed (${res.status})`,
+			startedAt,
+			status: res.status
+		});
+		throw new Error(`Upload failed (${res.status})`);
+	}
 	return res.json();
 }
 
@@ -406,7 +494,9 @@ export async function streamGenerateSystemPrompt(
 	onError: (err: string) => void
 ): Promise<void> {
 	const auth = await getAuthHeader();
-	const res = await fetch(`${baseUrl()}/models/${slug}/generate-system-prompt`, {
+	const path = `/models/${slug}/generate-system-prompt`;
+	const startedAt = performance.now();
+	const res = await fetch(`${baseUrl()}${path}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -416,6 +506,13 @@ export async function streamGenerateSystemPrompt(
 	});
 	if (!res.ok) {
 		const body = await res.text();
+		reportApiFailure({
+			method: 'POST',
+			path,
+			message: body.slice(0, 500) || res.statusText,
+			startedAt,
+			status: res.status
+		});
 		onError(`${res.status}: ${body}`);
 		return;
 	}

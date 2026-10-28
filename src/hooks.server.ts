@@ -10,11 +10,15 @@ import { logError } from '$lib/axiom';
 export const handle: Handle = withClerkHandler();
 
 export const handleError: HandleServerError = async ({ error, event, status, message }) => {
-	logError(error, {
+	// Awaited on purpose: Cloudflare cancels in-flight work once the response
+	// is returned, so a fire-and-forget ingest never lands.
+	await logError(error, {
+		source: 'server',
+		event: 'server_error',
 		url: event.url.toString(),
 		method: event.request.method,
 		status,
-		message,
+		kit_message: message,
 		route: event.route.id
 	});
 

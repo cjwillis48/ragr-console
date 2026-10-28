@@ -93,18 +93,44 @@ back through `SettingsTab`'s `onSaved`) and `sourcesTotal` (bound from
 `handleError` that ships errors to Axiom. Axiom is a silent no-op unless both
 `AXIOM_TOKEN` and `AXIOM_DATASET` are set, so missing logs locally are expected.
 
+## Logging
+
+`src/lib/axiom.ts` is server-only (`$env/dynamic/private`) and every log call
+**must be awaited** — Cloudflare cancels in-flight work the moment a response is
+returned, so a fire-and-forget ingest never lands.
+
+There is no server hop between the console and the RAGR API: `admin-api.ts` runs
+in the browser, so an API failure is invisible to `hooks.server.ts`. Browser
+errors reach Axiom through `src/lib/log.ts` → `POST /api/log` → `axiom.ts`.
+That endpoint is same-origin-only, size-capped, and flattens fields to scalars,
+because it is an unauthenticated billable write. Report new client-side failures
+through `$lib/log`, not by widening the endpoint's contract.
+
+Failures are tagged with an `event` field (`admin_api_failure`,
+`admin_api_unreachable`, `server_error`, `client_error`, …) and split by level:
+4xx is `warn`, 5xx and transport failures are `error`.
+
+Nothing in `src/widget/` or `src/lib/api.ts` reports — both run on customer
+sites and `api.ts` must stay env-free.
+
 Embed-origin enforcement lives on the **backend** as CORS on `/models/{slug}/*`. A
 `frame-ancestors` CSP handler used to be here and was removed on purpose — don't
 re-add CSP logic expecting it to gate embeds.
 
 ## Environment
 
-No `.env.example` exists yet; required vars are `PUBLIC_RAGR_API_URL`,
-`PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, the four
-`PUBLIC_CLERK_{SIGN_IN,SIGN_UP,AFTER_SIGN_IN,AFTER_SIGN_UP}_URL` values,
-`PUBLIC_DEMO_SLUGS`, and optionally `AXIOM_TOKEN` / `AXIOM_DATASET`.
+`.env.example` is the source of truth — copy it to `.env`. Required vars are
+`PUBLIC_RAGR_API_URL`, `PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, the
+four `PUBLIC_CLERK_{SIGN_IN,SIGN_UP,AFTER_SIGN_IN,AFTER_SIGN_UP}_URL` values,
+and `PUBLIC_DEMO_SLUGS`. Optional: `AXIOM_TOKEN` / `AXIOM_DATASET` (both unset
+disables logging entirely) and `LOG_LEVEL` (`debug` | `info` | `warn` |
+`error`, default `info`).
 `PUBLIC_WIDGET_SHA` is set only at deploy time to pin customers to an immutable
 hashed bundle; empty locally is normal.
+
+`AXIOM_TOKEN` / `AXIOM_DATASET` must also be set in **Cloudflare Pages, in both
+Production and Preview** — they are separate from `.env`, and production stays
+silent if they are missing there.
 
 Local admin work needs the backend API running at `PUBLIC_RAGR_API_URL`.
 
