@@ -249,8 +249,8 @@
 				</div>
 				<h3 class="mb-2 font-semibold">Simple API</h3>
 				<p class="text-sm leading-relaxed text-text-muted">
-					One REST endpoint, real-time streaming, no SDK. Build exactly the experience you want, in
-					any language.
+					One POST endpoint, streamed in real time. Call it from any language that speaks HTTP —
+					nothing to install.
 				</p>
 			</div>
 		</div>
